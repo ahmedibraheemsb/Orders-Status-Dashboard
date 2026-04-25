@@ -1,839 +1,1058 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EcomModa - لوحة متابعة الطلبات</title>
-  
-  <!-- Fonts: Noto Sans Arabic (Text) + IBM Plex Mono (Numbers/Tech) -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Libraries: Chart.js & ExcelJS -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders Status Dashboard — EcomModa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f3f4f6;--surface:#fff;--surface-2:#f9fafb;
+  --border:#e5e7eb;--border-strong:#d1d5db;
+  --text-primary:#111827;--text-secondary:#6b7280;--text-muted:#6b7280;
+  --accent:#2563eb;--accent-light:#eff6ff;--accent-dark:#1d4ed8;
+  --green:#16a34a;--green-light:#f0fdf4;--green-border:#86efac;
+  --red:#dc2626;--red-light:#fef2f2;--red-border:#fca5a5;
+  --amber:#d97706;--amber-light:#fffbeb;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --cyan:#0891b2;--cyan-light:#ecfeff;
+  --teal:#0d9488;--teal-light:#f0fdfa;
+  --orange:#ea580c;--orange-light:#fff7ed;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10);
+}
+html{font-family:'Noto Sans Arabic',sans-serif;font-size:14px}
+body{background:var(--bg);color:var(--text-primary);min-height:100vh}
 
-  <style>
-    /* CSS Variables (EcomModa Standard) */
-    :root {
-      --bg: #f3f4f6;
-      --surface: #ffffff;
-      --surface-2: #f9fafb;
-      --border: #e5e7eb;
-      --border-strong: #d1d5db;
-      --text-primary: #111827;
-      --text-secondary: #6b7280;
-      --text-muted: #6b7280;
-      --accent: #2563eb;
-      --accent-light: #eff6ff;
-      --accent-dark: #1d4ed8;
-      --green: #16a34a;
-      --green-light: #f0fdf4;
-      --red: #dc2626;
-      --red-light: #fef2f2;
-      --amber: #d97706;
-      --amber-light: #fffbeb;
-      --radius: 12px;
-      --radius-sm: 8px;
-      --shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
-    }
+/* ── Header ── */
+.app-header{
+  background:var(--surface);border-bottom:2px solid var(--border);
+  padding:0 20px;height:54px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:100;box-shadow:var(--shadow);
+}
+.app-logo{font-size:20px}
+.app-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.app-title span{color:var(--accent)}
+.hspacer{flex:1}
+.badge-date{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;
+  background:var(--accent-light);color:var(--accent);
+  padding:3px 10px;border-radius:20px;border:1px solid #bfdbfe;
+  direction:ltr;
+}
+.badge-cache{
+  font-size:11px;padding:3px 10px;border-radius:20px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);
+}
+.badge-cache.live{background:var(--green-light);border-color:var(--green-border);color:var(--green)}
+.hbtn{
+  height:30px;padding:0 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text-secondary);cursor:pointer;
+  font-family:'Noto Sans Arabic',sans-serif;font-size:12px;
+  display:flex;align-items:center;gap:5px;transition:all .15s;
+}
+.hbtn:hover{border-color:var(--accent);color:var(--accent)}
+.hbtn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hbtn.accent:hover{background:var(--accent-dark)}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      font-family: 'Noto Sans Arabic', sans-serif;
-      background-color: var(--bg);
-      color: var(--text-primary);
-      padding-bottom: 50px;
-    }
+/* ── Layout ── */
+.main{max-width:1420px;margin:0 auto;padding:18px 16px}
 
-    /* Typography Utilities */
-    .mono { font-family: 'IBM Plex Mono', monospace; direction: ltr; display: inline-block; }
-    .text-muted { color: var(--text-muted); font-size: 12px; }
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 
-    /* Header */
-    .app-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: var(--shadow);
-    }
-    .brand { font-size: 17px; font-weight: 700; color: var(--accent); }
-    .header-actions { display: flex; gap: 12px; align-items: center; }
-    
-    /* Data Badge */
-    .data-badge {
-      font-size: 11px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
-    }
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 14px 12px;box-shadow:var(--shadow);transition:all .15s;cursor:default;
+}
+.kpi-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.kpi-label{font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-val{font-size:28px;font-weight:800;font-family:'IBM Plex Mono',monospace;line-height:1;color:var(--text-primary);direction:ltr;text-align:right}
+.kpi-sub{font-size:10px;color:var(--text-muted);margin-top:4px}
+.kpi-rate{
+  display:inline-block;font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;
+  margin-top:5px;padding:1px 8px;border-radius:20px;direction:ltr;
+}
+.rate-g{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.rate-y{background:var(--amber-light);color:var(--amber);border:1px solid #fde68a}
+.rate-r{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.rate-b{background:var(--accent-light);color:var(--accent);border:1px solid #bfdbfe}
 
-    /* Buttons */
-    button {
-      font-family: inherit;
-      border: none;
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      transition: 0.2s;
-    }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-primary:hover { background: var(--accent-dark); }
-    .btn-outline { background: white; border: 1px solid var(--border-strong); color: var(--text-primary); }
-    .btn-outline:hover { background: var(--surface-2); }
-    .btn-icon { padding: 8px; font-size: 16px; background: transparent; border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;}
+/* ── Filters Bar ── */
+.filters-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.filters-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.fgroup{display:flex;flex-direction:column;gap:4px}
+.flabel{font-size:11px;color:var(--text-muted);font-weight:500}
+.date-row{display:flex;gap:6px;align-items:center}
+input[type="date"]{
+  height:32px;padding:0 8px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-primary);
+  background:var(--surface);outline:none;transition:border .15s;direction:ltr;
+}
+input[type="date"]:focus{border-color:var(--accent)}
+.date-sep{font-size:12px;color:var(--text-muted)}
 
-    /* States (Loading/Error) */
-    .state-box {
-      margin: 40px auto;
-      max-width: 400px;
-      padding: 30px;
-      background: var(--surface);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      text-align: center;
-      display: none; /* hidden by default */
-    }
-    .state-box.active { display: block; }
-    .state-icon { font-size: 40px; margin-bottom: 16px; }
-    .spinner {
-      width: 40px; height: 40px; margin: 0 auto 16px;
-      border: 4px solid var(--border); border-top-color: var(--accent);
-      border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
+/* Presets */
+.presets{display:flex;gap:5px;flex-wrap:wrap}
+.pbtn{
+  height:28px;padding:0 10px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-secondary);cursor:pointer;
+  font-family:'Noto Sans Arabic',sans-serif;font-size:11px;font-weight:500;transition:all .15s;
+}
+.pbtn:hover,.pbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-    /* Main Dashboard Layout */
-    .dashboard-container {
-      max-width: 1400px;
-      margin: 24px auto;
-      padding: 0 24px;
-      display: none; /* hidden until data loads */
-    }
-    .dashboard-container.active { display: block; }
+/* Toggle buttons */
+.toggles{display:flex;flex-wrap:wrap;gap:4px;max-width:380px}
+.tbtn{
+  height:26px;padding:0 9px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-secondary);cursor:pointer;
+  font-family:'Noto Sans Arabic',sans-serif;font-size:11px;transition:all .15s;white-space:nowrap;
+}
+.tbtn.on{background:var(--accent-light);color:var(--accent);border-color:#93c5fd;font-weight:600}
 
-    /* Filters Bar */
-    .filters-bar {
-      background: var(--surface);
-      padding: 16px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      margin-bottom: 24px;
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-    .filter-group { display: flex; flex-direction: column; gap: 6px; }
-    .filter-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
-    .filter-group input, .filter-group select {
-      padding: 8px 12px;
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius-sm);
-      font-family: inherit;
-      font-size: 13px;
-      outline: none;
-      min-width: 150px;
-    }
-    /* Date inputs specifically use Mono */
-    input[type="date"] { font-family: 'IBM Plex Mono', monospace; }
+/* S-type radio */
+.stype{display:flex;gap:3px}
+.stbtn{
+  height:28px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-secondary);cursor:pointer;
+  font-family:'Noto Sans Arabic',sans-serif;font-size:11px;font-weight:500;transition:all .15s;
+}
+.stbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-    /* KPI Grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: var(--surface);
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      border-right: 4px solid var(--accent);
-    }
-    .kpi-card.green { border-right-color: var(--green); }
-    .kpi-card.amber { border-right-color: var(--amber); }
-    .kpi-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
-    .kpi-value { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-primary); }
-    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+/* ── Charts Grid ── */
+.charts-2-1{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
+.charts-1-1{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:960px){.charts-2-1,.charts-1-1{grid-template-columns:1fr}}
+.chart-wrap{position:relative}
+.chart-wrap canvas{max-height:250px}
 
-    /* Charts Grid */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .chart-card {
-      background: var(--surface);
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-    .chart-card h3 { font-size: 14px; margin-bottom: 16px; color: var(--text-primary); }
-    .chart-container { position: relative; height: 300px; width: 100%; }
+/* ── S2 Tracker ── */
+.s2-section{margin-bottom:12px}
+.s2-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.s2-tag{background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.s2-layout{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}
+@media(max-width:960px){.s2-layout{grid-template-columns:1fr}}
+.s2-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s2k{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.s2k-label{font-size:10px;color:var(--text-muted);margin-bottom:4px}
+.s2k-val{font-size:24px;font-weight:800;font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:right}
+.s2-chart canvas{max-height:160px}
 
-    /* Recommendations */
-    .recommendations {
-      margin-bottom: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .rec-card {
-      background: var(--surface);
-      padding: 16px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid var(--border);
-    }
-    .rec-card.urgent { background: var(--red-light); border-color: var(--red); color: var(--red); }
-    .rec-card.warning { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
-    .rec-icon { font-size: 20px; }
-    .rec-text { font-size: 14px; font-weight: 500; }
+/* ── Recommendations ── */
+.recs{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.rec{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--radius-sm);border:1px solid;transition:opacity .15s}
+.rec-u{background:#fff1f2;border-color:#fecdd3}
+.rec-i{background:var(--amber-light);border-color:#fde68a}
+.rec-m{background:var(--accent-light);border-color:#bfdbfe}
+.rec-ok{background:var(--green-light);border-color:var(--green-border)}
+.rec-icon{font-size:17px;flex-shrink:0;margin-top:1px}
+.rec-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.rec-body{font-size:11px;color:var(--text-secondary);margin-top:2px}
 
-    /* Table */
-    .table-card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .table-responsive { overflow-x: auto; max-height: 600px; }
-    table { width: 100%; border-collapse: collapse; text-align: right; }
-    th {
-      background: var(--surface-2);
-      padding: 12px 16px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid var(--border);
-    }
-    td {
-      padding: 12px 16px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--border);
-    }
-    tr:hover td { background: var(--surface-2); }
-    .status-pill {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--bg);
-      color: var(--text-secondary);
-    }
-    .status-pill.delivered { background: var(--green-light); color: var(--green); }
-    .status-pill.returned { background: var(--red-light); color: var(--red); }
+/* ── Table ── */
+.tbl-section.card{padding:14px}
+.tbl-top{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.search{
+  flex:1;min-width:180px;height:32px;padding:0 10px;
+  border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  font-family:'Noto Sans Arabic',sans-serif;font-size:12px;outline:none;
+}
+.search:focus{border-color:var(--accent)}
+.tbl-info{font-size:11px;color:var(--text-muted)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{
+  background:var(--surface-2);border-bottom:2px solid var(--border);
+  padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary);
+  white-space:nowrap;cursor:pointer;user-select:none;
+}
+thead th:hover{background:#f1f5f9}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--surface-2)}
+tbody td{padding:7px 10px;color:var(--text-primary);white-space:nowrap}
+.olink{color:var(--accent);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12px}
+.olink:hover{text-decoration:underline}
+.sbadge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+/* S1 badges */
+.b-new{background:#f1f5f9;color:#475569}
+.b-confirmed{background:var(--accent-light);color:var(--accent)}
+.b-ready{background:var(--cyan-light);color:var(--cyan)}
+.b-shipped{background:var(--purple-light);color:var(--purple)}
+.b-delivered{background:var(--green-light);color:var(--green)}
+.b-returned{background:var(--orange-light);color:var(--orange)}
+.b-cancelled{background:var(--red-light);color:var(--red)}
+.b-unknown{background:#f8fafc;color:#94a3b8}
+/* Zone badges */
+.bz-cairo{background:var(--accent-light);color:var(--accent)}
+.bz-other{background:var(--purple-light);color:var(--purple)}
+.bz-show{background:var(--teal-light);color:var(--teal)}
+.bz-blank{background:#f8fafc;color:#94a3b8}
+/* Return badge */
+.b-ret{background:var(--orange-light);color:var(--orange)}
+.b-nret{background:#f8fafc;color:#94a3b8}
 
-    /* Settings Modal */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      display: none; align-items: center; justify-content: center;
-      z-index: 1000;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--surface); padding: 24px; border-radius: var(--radius);
-      width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
-    .modal h2 { font-size: 17px; margin-bottom: 16px; }
-    .modal .form-group { margin-bottom: 16px; }
-    .modal label { display: block; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary); }
-    .modal input { width: 100%; padding: 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: 'IBM Plex Mono', monospace; font-size: 13px; direction: ltr; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+/* Pagination */
+.pag{display:flex;justify-content:center;align-items:center;gap:5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.pgbtn{
+  height:28px;min-width:28px;padding:0 6px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface);color:var(--text-secondary);cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.pgbtn:hover,.pgbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pgbtn:disabled{opacity:.35;cursor:not-allowed}
+.pgdots{color:var(--text-muted);padding:0 2px;font-size:12px}
 
-    /* Toast */
-    #toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      padding: 12px 24px; border-radius: var(--radius-sm); color: white;
-      font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none;
-      transition: opacity 0.3s; z-index: 2000;
-    }
-    #toast.show { opacity: 1; }
-  </style>
+/* ── States ── */
+.state-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:12px;color:var(--text-secondary)}
+.state-icon{font-size:38px}
+.state-title{font-size:16px;font-weight:700}
+.state-sub{font-size:13px;text-align:center;max-width:300px;color:var(--text-muted)}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.retry-btn{height:36px;padding:0 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;font-size:13px;font-weight:600}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);padding:22px;width:400px;max-width:95vw;box-shadow:var(--shadow-md)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px}
+.fld input{width:100%;height:34px;padding:0 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;direction:ltr}
+.fld input:focus{border-color:var(--accent)}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.btn-cancel{height:34px;padding:0 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;font-size:12px}
+.btn-save{height:34px;padding:0 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;font-size:13px;font-weight:600}
+.btn-save:hover{background:var(--accent-dark)}
+
+/* ── Section title ── */
+.sec-title{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+</style>
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="app-header">
-    <div class="brand">EcomModa | أوامر التشغيل</div>
-    <div class="header-actions">
-      <div class="data-badge" id="lastUpdatedBadge">لم يتم التحديث</div>
-      <button class="btn-outline" onclick="openSettings()" title="الإعدادات">⚙️</button>
-      <button class="btn-outline" onclick="exportData()">تصدير XLSX</button>
-      <button class="btn-primary" onclick="fetchData(true)">تحديث البيانات</button>
-    </div>
-  </header>
+<!-- Header -->
+<header class="app-header">
+  <span class="app-logo">📦</span>
+  <div class="app-title">Orders Status <span>Dashboard</span></div>
+  <div class="hspacer"></div>
+  <span class="badge-date" id="hDate" dir="ltr">—</span>
+  <span class="badge-cache" id="hCache" style="display:none"></span>
+  <button class="hbtn" onclick="doRefresh()">🔄 تحديث</button>
+  <button class="hbtn" onclick="exportXLSX()">📥 XLSX</button>
+  <button class="hbtn" onclick="openSettings()">⚙️ إعدادات</button>
+</header>
 
-  <!-- States -->
-  <div id="loadingState" class="state-box">
+<!-- Settings Modal -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-title">⚙️ إعدادات الاتصال</div>
+    <div class="fld">
+      <label>Worker URL</label>
+      <input id="cfgUrl" type="url" placeholder="https://orders-status-dashboard.ecommoda24.workers.dev">
+    </div>
+    <div class="fld">
+      <label>Worker Secret</label>
+      <input id="cfgSecret" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeSettings()">إلغاء</button>
+      <button class="btn-save" onclick="saveSettings()">حفظ وتحميل</button>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- Loading -->
+  <div id="stateLoading" class="state-wrap" style="display:none">
     <div class="spinner"></div>
-    <p>جاري جلب البيانات من Shopify...</p>
-  </div>
-  <div id="errorState" class="state-box">
-    <div class="state-icon">⚠️</div>
-    <p id="errorMessage" style="color: var(--red); margin-bottom: 16px;"></p>
-    <button class="btn-primary" onclick="fetchData()">إعادة المحاولة</button>
-    <button class="btn-outline" onclick="openSettings()" style="margin-right: 8px;">الإعدادات</button>
+    <div class="state-title">جاري التحميل...</div>
+    <div class="state-sub" id="loadMsg">يتم جلب الأوردرات من Shopify</div>
   </div>
 
-  <!-- Main Dashboard -->
-  <main id="dashboard" class="dashboard-container">
-    
-    <!-- Filters Bar -->
-    <div class="filters-bar">
-      <div class="filter-group">
-        <label>من تاريخ</label>
-        <input type="date" id="filterDateFrom" onchange="fetchData(true)">
-      </div>
-      <div class="filter-group">
-        <label>إلى تاريخ</label>
-        <input type="date" id="filterDateTo" onchange="fetchData(true)">
-      </div>
-      <div class="filter-group">
-        <label>شركة الشحن</label>
-        <select id="filterCourier" onchange="applyFilters()">
-          <option value="ALL">الكل</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>حالة S1</label>
-        <select id="filterS1" onchange="applyFilters()">
-          <option value="ALL">الكل</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>حالة S2</label>
-        <select id="filterS2" onchange="applyFilters()">
-          <option value="ALL">الكل</option>
-        </select>
-      </div>
-    </div>
+  <!-- Error -->
+  <div id="stateError" class="state-wrap" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">خطأ في التحميل</div>
+    <div class="state-sub" id="errMsg"></div>
+    <button class="retry-btn" onclick="loadData()">إعادة المحاولة</button>
+  </div>
+
+  <!-- Empty / no config -->
+  <div id="stateEmpty" class="state-wrap">
+    <div class="state-icon">⚙️</div>
+    <div class="state-title">الإعدادات غير مكتملة</div>
+    <div class="state-sub">أدخل Worker URL والـ Secret للبدء</div>
+    <button class="retry-btn" onclick="openSettings()">فتح الإعدادات</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none">
 
     <!-- KPIs -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-title">إجمالي الطلبات</div>
-        <div class="kpi-value" id="kpiTotal">0</div>
-        <div class="kpi-sub">في الفترة المحددة</div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filters-row">
+        <div class="fgroup">
+          <span class="flabel">الفترة الزمنية</span>
+          <div class="date-row">
+            <input type="date" id="fFrom" onchange="onDateChange()">
+            <span class="date-sep">—</span>
+            <input type="date" id="fTo" onchange="onDateChange()">
+          </div>
+        </div>
+        <div class="fgroup">
+          <span class="flabel">اختيار سريع</span>
+          <div class="presets">
+            <button class="pbtn" onclick="setPreset('today',this)">اليوم</button>
+            <button class="pbtn" onclick="setPreset('yesterday',this)">أمس</button>
+            <button class="pbtn" onclick="setPreset('week',this)">هذا الأسبوع</button>
+            <button class="pbtn on" id="presetMonth" onclick="setPreset('month',this)">هذا الشهر</button>
+          </div>
+        </div>
+        <div class="fgroup">
+          <span class="flabel">نوع الشحنة</span>
+          <div class="stype">
+            <button class="stbtn on" id="st-all"  onclick="setSType('all')">الكل</button>
+            <button class="stbtn"    id="st-s1"   onclick="setSType('s1')">S1</button>
+            <button class="stbtn"    id="st-s2"   onclick="setSType('s2')">S2</button>
+          </div>
+        </div>
+        <div class="fgroup">
+          <span class="flabel">الكوريير</span>
+          <div class="toggles" id="courierToggles"></div>
+        </div>
+        <div class="fgroup">
+          <span class="flabel">المنطقة</span>
+          <div class="toggles" id="zoneToggles">
+            <button class="tbtn on" data-z="" onclick="toggleZone(this,'')">الكل</button>
+            <button class="tbtn" data-z="Cairo+Giza"    onclick="toggleZone(this,'Cairo+Giza')">Cairo+Giza</button>
+            <button class="tbtn" data-z="Other_Regions" onclick="toggleZone(this,'Other_Regions')">Other_Regions</button>
+            <button class="tbtn" data-z="Show_Room"     onclick="toggleZone(this,'Show_Room')">Show_Room</button>
+            <button class="tbtn" data-z="BLANK"         onclick="toggleZone(this,'BLANK')">BLANK</button>
+          </div>
+        </div>
       </div>
-      <div class="kpi-card green">
-        <div class="kpi-title">معدل التسليم الناجح (S1)</div>
-        <div class="kpi-value" id="kpiSuccessRate">0%</div>
-        <div class="kpi-sub">المسلم / إجمالي المشحون</div>
+    </div>
+
+    <!-- Charts Row 1: Line + Donut S1 -->
+    <div class="charts-2-1">
+      <div class="card">
+        <div class="card-title">📈 التسليمات اليومية (S1)</div>
+        <div class="chart-wrap"><canvas id="chartLine"></canvas></div>
       </div>
-      <div class="kpi-card amber">
-        <div class="kpi-title">إجمالي المرتجعات (S2)</div>
-        <div class="kpi-value" id="kpiReturns">0</div>
-        <div class="kpi-sub" id="kpiReturnsSub">0% من الإجمالي</div>
+      <div class="card">
+        <div class="card-title">🔵 توزيع حالات S1</div>
+        <div class="chart-wrap"><canvas id="chartDonutS1"></canvas></div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-title">طلبات بدون شركة شحن</div>
-        <div class="kpi-value" id="kpiNoCourier">0</div>
-        <div class="kpi-sub">تحتاج لتعيين مندوب</div>
+    </div>
+
+    <!-- Charts Row 2: Courier Bar + Zone Donut -->
+    <div class="charts-1-1">
+      <div class="card">
+        <div class="card-title">🚚 أداء الكوريير (Delivered / Returned / Cancelled)</div>
+        <div class="chart-wrap"><canvas id="chartCourier"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🗺️ توزيع المناطق</div>
+        <div class="chart-wrap"><canvas id="chartZone"></canvas></div>
+      </div>
+    </div>
+
+    <!-- S2 Tracker -->
+    <div class="s2-section">
+      <div class="s2-header">
+        <div class="sec-title" style="margin:0">🔄 S2 Tracker</div>
+        <span class="s2-tag">مرتجعات واستبدال</span>
+      </div>
+      <div class="s2-layout">
+        <div class="s2-kpis">
+          <div class="s2k" id="s2Total">    <div class="s2k-label">إجمالي S2</div><div class="s2k-val">—</div></div>
+          <div class="s2k" id="s2Pipeline"> <div class="s2k-label">في الانتظار</div><div class="s2k-val">—</div></div>
+          <div class="s2k" id="s2Return">   <div class="s2k-label">Confirmed+RETURN</div><div class="s2k-val">—</div></div>
+          <div class="s2k" id="s2Exchange"> <div class="s2k-label">Confirmed+EXCHANGE</div><div class="s2k-val">—</div></div>
+        </div>
+        <div class="card s2-chart">
+          <div class="card-title">مراحل S2 Pipeline</div>
+          <div class="chart-wrap"><canvas id="chartS2"></canvas></div>
+        </div>
       </div>
     </div>
 
     <!-- Recommendations -->
-    <div class="recommendations" id="recommendationsContainer">
-      <!-- Injected via JS -->
-    </div>
-
-    <!-- Charts -->
-    <div class="charts-grid">
-      <div class="chart-card" style="grid-column: span 2;">
-        <h3>حركة الطلبات اليومية</h3>
-        <div class="chart-container"><canvas id="lineChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>توزيع حالات الشحن الأساسي (S1)</h3>
-        <div class="chart-container"><canvas id="s1Donut"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>أداء شركات الشحن (مسلم مقابل مرتجع)</h3>
-        <div class="chart-container"><canvas id="courierBar"></canvas></div>
-      </div>
-    </div>
+    <div class="sec-title">💡 توصيات تشغيلية</div>
+    <div class="recs" id="recs"></div>
 
     <!-- Table -->
-    <div class="table-card">
-      <div class="table-responsive">
+    <div class="tbl-section card">
+      <div class="tbl-top">
+        <input class="search" id="tSearch" type="text" placeholder="بحث برقم الأوردر أو اسم العميل..." oninput="renderTable()">
+        <span class="tbl-info" id="tInfo"></span>
+        <button class="hbtn" onclick="exportXLSX()">📥 تصدير XLSX</button>
+      </div>
+      <div class="tbl-wrap">
         <table>
           <thead>
             <tr>
-              <th>رقم الأوردر</th>
-              <th>التاريخ</th>
-              <th>العميل</th>
-              <th>S1 Status</th>
-              <th>S2 Status</th>
-              <th>شركة الشحن</th>
-              <th>المنطقة (Zone)</th>
+              <th onclick="sortBy('name')">رقم الأوردر</th>
+              <th onclick="sortBy('date')">التاريخ</th>
+              <th onclick="sortBy('customerName')">العميل</th>
+              <th onclick="sortBy('totalItems')">المنتجات</th>
+              <th onclick="sortBy('courier')">الكوريير</th>
+              <th onclick="sortBy('zone')">المنطقة</th>
+              <th onclick="sortBy('s1')">S1</th>
+              <th onclick="sortBy('s2')">S2</th>
+              <th onclick="sortBy('returnStatus')">Return</th>
             </tr>
           </thead>
-          <tbody id="tableBody">
-            <!-- Injected via JS -->
-          </tbody>
+          <tbody id="tBody"></tbody>
         </table>
       </div>
+      <div class="pag" id="tPag"></div>
     </div>
-  </main>
 
-  <!-- Settings Modal -->
-  <div class="modal-overlay" id="settingsModal">
-    <div class="modal">
-      <h2>إعدادات الربط</h2>
-      <div class="form-group">
-        <label>رابط الـ Worker (URL)</label>
-        <input type="text" id="cfgUrl" placeholder="https://orders-dash.ecommoda24.workers.dev">
-      </div>
-      <div class="form-group">
-        <label>كلمة المرور (Worker Secret)</label>
-        <input type="password" id="cfgSecret" placeholder="••••••••">
-      </div>
-      <div class="modal-actions">
-        <button class="btn-outline" onclick="closeSettings()">إلغاء</button>
-        <button class="btn-primary" onclick="saveSettings()">حفظ</button>
-      </div>
+  </div><!-- /dashboard -->
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const LS_KEY = 'orders_status_dashboard_config';
+
+function getCfg(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||{}; }catch{ return {}; } }
+function saveCfg(c){ localStorage.setItem(LS_KEY, JSON.stringify(c)); }
+function hasCfg(){ const c=getCfg(); return c.workerUrl?.startsWith('http') && c.secret?.length>0; }
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let allOrders     = [];
+let filteredOrds  = [];
+let shopDomain    = '';
+let currentPage   = 1;
+const PAGE_SIZE   = 50;
+let sortKey       = 'date';
+let sortDir       = -1;
+
+const flt = { dateFrom:'', dateTo:'', couriers:[], zones:[], sType:'all' };
+
+// ═══════════════════════════════════════════════════════════════
+// COLORS
+// ═══════════════════════════════════════════════════════════════
+const S1_COLOR = {
+  'New Order':'#94a3b8','Confirmed':'#2563eb','Ready':'#0891b2',
+  'Shipped':'#7c3aed','Delivered':'#16a34a','Returned':'#ea580c',
+  'Cancelled':'#dc2626','غير محدد':'#d1d5db',
+};
+const ZONE_COLOR = {
+  'Cairo+Giza':'#2563eb','Other_Regions':'#7c3aed',
+  'Show_Room':'#0d9488','BLANK':'#94a3b8',
+};
+const S2_STAGES = ['Confirmed+RETURN','Confirmed+EXCHANGE','Ready','Shipped','Returned'];
+const S2_COLORS = ['#f59e0b','#ec4899','#0891b2','#7c3aed','#ea580c'];
+
+// chart instances
+const CH = {};
+function killChart(k){ if(CH[k]){ CH[k].destroy(); delete CH[k]; } }
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+function init(){
+  const today = new Date();
+  flt.dateFrom = ymd(new Date(today.getFullYear(), today.getMonth(), 1));
+  flt.dateTo   = ymd(today);
+  document.getElementById('fFrom').value = flt.dateFrom;
+  document.getElementById('fTo').value   = flt.dateTo;
+  setHeaderDate();
+  hasCfg() ? loadData() : showState('empty');
+}
+
+function ymd(d){ return d.toISOString().slice(0,10); }
+function setHeaderDate(){
+  document.getElementById('hDate').textContent = `${flt.dateFrom} — ${flt.dateTo}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATES
+// ═══════════════════════════════════════════════════════════════
+function showState(s){
+  ['stateLoading','stateError','stateEmpty','dashboard'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  if(s==='loading') document.getElementById('stateLoading').style.display='flex';
+  else if(s==='error')   document.getElementById('stateError').style.display='flex';
+  else if(s==='empty')   document.getElementById('stateEmpty').style.display='flex';
+  else if(s==='dash')    document.getElementById('dashboard').style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════════════════════════
+async function loadData(force=false){
+  if(!hasCfg()){ showState('empty'); return; }
+  showState('loading');
+  const { workerUrl, secret } = getCfg();
+  try{
+    const resp = await fetch(`${workerUrl}/data`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${secret}`},
+      body: JSON.stringify({ dateFrom:flt.dateFrom, dateTo:flt.dateTo, forceRefresh:force }),
+    });
+    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e.error||`HTTP ${resp.status}`); }
+    const data = await resp.json();
+    allOrders  = data.orders || [];
+    shopDomain = data.shopDomain || '';
+
+    // Cache badge
+    const hc = document.getElementById('hCache');
+    const ts = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString('ar-EG') : '';
+    hc.style.display = 'inline';
+    if(data.fromCache){
+      hc.className='badge-cache';
+      hc.textContent=`⚡ Cache — ${ts}`;
+    } else {
+      hc.className='badge-cache live';
+      hc.textContent=`🟢 Live — ${ts}`;
+    }
+
+    buildCourierToggles();
+    applyAndRender();
+    showState('dash');
+  } catch(err){
+    document.getElementById('errMsg').textContent = err.message;
+    showState('error');
+  }
+}
+
+function doRefresh(){ loadData(true); }
+
+// ═══════════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════════
+function buildCourierToggles(){
+  const couriers = [...new Set(allOrders.map(o=>o.courier).filter(Boolean))].sort();
+  const el = document.getElementById('courierToggles');
+  el.innerHTML = `<button class="tbtn on" data-c="" onclick="toggleCourier(this,'')">الكل</button>`;
+  couriers.forEach(c=>{
+    const b = document.createElement('button');
+    b.className='tbtn'; b.dataset.c=c; b.textContent=c;
+    b.onclick=()=>toggleCourier(b,c);
+    el.appendChild(b);
+  });
+}
+
+function toggleCourier(btn,val){
+  if(val===''){
+    flt.couriers=[];
+    document.querySelectorAll('#courierToggles .tbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  } else {
+    document.querySelector('#courierToggles [data-c=""]').classList.remove('on');
+    btn.classList.toggle('on');
+    const active=[...document.querySelectorAll('#courierToggles .tbtn.on')].map(b=>b.dataset.c).filter(Boolean);
+    flt.couriers=active;
+    if(!active.length) document.querySelector('#courierToggles [data-c=""]').classList.add('on');
+  }
+  applyAndRender();
+}
+
+function toggleZone(btn,val){
+  if(val===''){
+    flt.zones=[];
+    document.querySelectorAll('#zoneToggles .tbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  } else {
+    document.querySelector('#zoneToggles [data-z=""]').classList.remove('on');
+    btn.classList.toggle('on');
+    const active=[...document.querySelectorAll('#zoneToggles .tbtn.on')].map(b=>b.dataset.z).filter(Boolean);
+    flt.zones=active;
+    if(!active.length) document.querySelector('#zoneToggles [data-z=""]').classList.add('on');
+  }
+  applyAndRender();
+}
+
+function setSType(t){
+  flt.sType=t;
+  ['all','s1','s2'].forEach(x=>document.getElementById(`st-${x}`).classList.toggle('on',x===t));
+  applyAndRender();
+}
+
+function onDateChange(){
+  flt.dateFrom = document.getElementById('fFrom').value;
+  flt.dateTo   = document.getElementById('fTo').value;
+  setHeaderDate();
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
+  loadData();
+}
+
+function setPreset(p, btn){
+  const today=new Date();
+  let f, t=ymd(today);
+  if(p==='today'){ f=t; }
+  else if(p==='yesterday'){ const y=new Date(today); y.setDate(y.getDate()-1); f=t=ymd(y); }
+  else if(p==='week'){ const m=new Date(today); m.setDate(today.getDate()-today.getDay()+(today.getDay()===0?-6:1)); f=ymd(m); }
+  else { f=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`; }
+  flt.dateFrom=f; flt.dateTo=t;
+  document.getElementById('fFrom').value=f;
+  document.getElementById('fTo').value=t;
+  setHeaderDate();
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  loadData();
+}
+
+function applyFilters(){
+  return allOrders.filter(o=>{
+    if(o.date<flt.dateFrom||o.date>flt.dateTo) return false;
+    if(flt.sType==='s1' && o.s2) return false;
+    if(flt.sType==='s2' && !o.s2) return false;
+    if(flt.couriers.length && !flt.couriers.includes(o.courier)) return false;
+    if(flt.zones.length   && !flt.zones.includes(o.zone))     return false;
+    return true;
+  });
+}
+
+function applyAndRender(){
+  filteredOrds=applyFilters();
+  currentPage=1;
+  renderKPIs(filteredOrds);
+  renderCharts(filteredOrds);
+  renderS2(filteredOrds);
+  renderRecs(filteredOrds);
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KPIs
+// ═══════════════════════════════════════════════════════════════
+function renderKPIs(orders){
+  const s1only = orders.filter(o=>!o.s2);
+  const s2only = orders.filter(o=>o.s2);
+  const delivered  = s1only.filter(o=>o.s1==='Delivered').length;
+  const returned   = s1only.filter(o=>o.s1==='Returned').length;
+  const cancelled  = s1only.filter(o=>o.s1==='Cancelled').length;
+  const pipeline   = s1only.filter(o=>['New Order','Confirmed','Ready','Shipped'].includes(o.s1)).length;
+  const s2Pending  = s2only.filter(o=>['Confirmed+RETURN','Confirmed+EXCHANGE','Ready','Shipped'].includes(o.s2)).length;
+  const unknown    = s1only.filter(o=>o.s1==='غير محدد').length;
+  const total      = orders.length;
+  const s1Total    = s1only.length;
+
+  const delRate  = delivered+returned+cancelled>0 ? ((delivered/(delivered+returned+cancelled))*100).toFixed(1) : null;
+  const cancRate = s1Total>0 ? ((cancelled/s1Total)*100).toFixed(1) : null;
+  const retRate  = delivered+returned>0 ? ((returned/(delivered+returned))*100).toFixed(1) : null;
+
+  function rClass(v,g,y,inv=false){
+    if(v===null) return 'rate-b';
+    const n=parseFloat(v);
+    return !inv ? (n>=g?'rate-g':n>=y?'rate-y':'rate-r') : (n<=g?'rate-g':n<=y?'rate-y':'rate-r');
+  }
+
+  const kpis=[
+    { label:'إجمالي الأوردرات', val:total.toLocaleString('en-US'), sub:`S1: ${s1Total} | S2: ${s2only.length}` },
+    { label:'تم التسليم (S1)',  val:delivered.toLocaleString('en-US'), rate:delRate?`${delRate}%`:null, rc:rClass(delRate,70,55), sub:'Delivery Rate' },
+    { label:'مُلغاة (S1)',      val:cancelled.toLocaleString('en-US'), rate:cancRate?`${cancRate}%`:null, rc:rClass(cancRate,20,35,true), sub:'Cancellation Rate' },
+    { label:'مرتجعات (S1)',     val:returned.toLocaleString('en-US'),  rate:retRate?`${retRate}%`:null,  rc:rClass(retRate,12,20,true), sub:'Return Rate' },
+    { label:'Pipeline S1',      val:pipeline.toLocaleString('en-US'), sub:'New→Confirmed→Ready→Shipped' },
+    { label:'S2 في الانتظار',   val:s2Pending.toLocaleString('en-US'), sub:'Confirmed / Ready / Shipped', rc: s2Pending>15?'rate-r':'rate-b' },
+    { label:'غير محدد (S1)',    val:unknown.toLocaleString('en-US'), sub:'بدون تصنيف', rc: unknown>0?'rate-y':'' },
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-val">${k.val}</div>
+      ${k.rate ? `<span class="kpi-rate ${k.rc}">${k.rate}</span>` : (k.rc ? `<span class="kpi-rate ${k.rc}">${k.sub||''}</span>` : '')}
+      ${(!k.rate && !k.rc && k.sub) ? `<div class="kpi-sub">${k.sub}</div>` : (k.rate && k.sub ? `<div class="kpi-sub">${k.sub}</div>` : '')}
     </div>
-  </div>
+  `).join('');
+}
 
-  <!-- Toast -->
-  <div id="toast"></div>
+// ═══════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════
+const FONT_MAIN = { family:"'Noto Sans Arabic', sans-serif" };
+const FONT_MONO = { family:"'IBM Plex Mono', monospace" };
 
-  <script>
-    // ─── Configuration & State ───────────────────────────────────────────────
-    const CFG_KEY = "tool_orders_dashboard_cfg";
-    let allData = [];
-    let filteredData = [];
-    
-    // Chart instances for destroying before re-render
-    let chartLine = null;
-    let chartS1 = null;
-    let chartCourier = null;
+function renderCharts(orders){
+  renderLine(orders);
+  renderDonutS1(orders);
+  renderCourierChart(orders);
+  renderZoneChart(orders);
+}
 
-    // ─── Init ────────────────────────────────────────────────────────────────
-    window.onload = () => {
-      setDefaultDates();
-      if (!isConfigured()) {
-        openSettings();
-      } else {
-        fetchData();
-      }
-    };
+// Chart 1: Line — daily S1
+function renderLine(orders){
+  killChart('line');
+  const s1 = orders.filter(o=>!o.s2);
+  const byDate = {};
+  s1.forEach(o=>{
+    if(!byDate[o.date]) byDate[o.date]={ Delivered:0, Cancelled:0, Returned:0, Shipped:0 };
+    if(byDate[o.date][o.s1]!==undefined) byDate[o.date][o.s1]++;
+  });
+  const dates = Object.keys(byDate).sort();
+  const mk = (label,key,color)=>({ label, data:dates.map(d=>byDate[d][key]), borderColor:color, backgroundColor:color+'22', tension:.35, pointRadius:3, fill:false });
+  const ctx = document.getElementById('chartLine').getContext('2d');
+  CH.line = new Chart(ctx,{
+    type:'line',
+    data:{ labels:dates, datasets:[
+      mk('Delivered','Delivered','#16a34a'),
+      mk('Cancelled','Cancelled','#dc2626'),
+      mk('Returned','Returned','#ea580c'),
+      mk('Shipped','Shipped','#7c3aed'),
+    ]},
+    options:{
+      responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ font:FONT_MAIN, boxWidth:12, padding:10 } } },
+      scales:{
+        x:{ ticks:{ font:{...FONT_MONO,size:10}, maxRotation:45 } },
+        y:{ beginAtZero:true, ticks:{ font:{...FONT_MONO,size:10} } },
+      },
+    },
+  });
+}
 
-    function setDefaultDates() {
-      const today = new Date();
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
-      
-      document.getElementById('filterDateFrom').value = firstDay.toISOString().split('T')[0];
-      document.getElementById('filterDateTo').value = lastDay.toISOString().split('T')[0];
+// Chart 2: Donut — S1 status
+function renderDonutS1(orders){
+  killChart('ds1');
+  const s1=orders.filter(o=>!o.s2);
+  const counts={};
+  s1.forEach(o=>{ counts[o.s1]=(counts[o.s1]||0)+1; });
+  const labels=Object.keys(counts).filter(l=>counts[l]>0);
+  const total=labels.reduce((s,l)=>s+counts[l],0);
+  const ctx=document.getElementById('chartDonutS1').getContext('2d');
+  CH.ds1=new Chart(ctx,{
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:labels.map(l=>counts[l]), backgroundColor:labels.map(l=>S1_COLOR[l]||'#94a3b8'), borderWidth:2, borderColor:'#fff' }] },
+    options:{
+      responsive:true, cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:FONT_MAIN, boxWidth:10, padding:8 } },
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString('en-US')} (${((ctx.raw/total)*100).toFixed(1)}%)` } },
+      },
+    },
+  });
+}
+
+// Chart 3: Bar — courier
+function renderCourierChart(orders){
+  killChart('courier');
+  const s1=orders.filter(o=>!o.s2&&o.courier);
+  const m={};
+  s1.forEach(o=>{
+    if(!m[o.courier]) m[o.courier]={ Delivered:0, Returned:0, Cancelled:0 };
+    if(m[o.courier][o.s1]!==undefined) m[o.courier][o.s1]++;
+  });
+  const labels=Object.keys(m).sort((a,b)=>{
+    const ta=m[a].Delivered+m[a].Returned+m[a].Cancelled;
+    const tb=m[b].Delivered+m[b].Returned+m[b].Cancelled;
+    return tb-ta;
+  });
+  const ctx=document.getElementById('chartCourier').getContext('2d');
+  CH.courier=new Chart(ctx,{
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Delivered', data:labels.map(l=>m[l].Delivered), backgroundColor:'#16a34a' },
+      { label:'Returned',  data:labels.map(l=>m[l].Returned),  backgroundColor:'#ea580c' },
+      { label:'Cancelled', data:labels.map(l=>m[l].Cancelled), backgroundColor:'#dc2626' },
+    ]},
+    options:{
+      responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ font:FONT_MAIN, boxWidth:12, padding:10 } } },
+      scales:{
+        x:{ ticks:{ font:{...FONT_MAIN,size:11} } },
+        y:{ beginAtZero:true, ticks:{ font:{...FONT_MONO,size:10} } },
+      },
+    },
+  });
+}
+
+// Chart 4: Donut — zone
+function renderZoneChart(orders){
+  killChart('zone');
+  const m={};
+  orders.forEach(o=>{ m[o.zone]=(m[o.zone]||0)+1; });
+  const labels=Object.keys(m).filter(l=>m[l]>0);
+  const total=labels.reduce((s,l)=>s+m[l],0);
+  const ctx=document.getElementById('chartZone').getContext('2d');
+  CH.zone=new Chart(ctx,{
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:labels.map(l=>m[l]), backgroundColor:labels.map(l=>ZONE_COLOR[l]||'#94a3b8'), borderWidth:2, borderColor:'#fff' }] },
+    options:{
+      responsive:true, cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:FONT_MAIN, boxWidth:10, padding:8 } },
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString('en-US')} (${((ctx.raw/total)*100).toFixed(1)}%)` } },
+      },
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// S2 TRACKER
+// ═══════════════════════════════════════════════════════════════
+function renderS2(orders){
+  const s2=orders.filter(o=>o.s2);
+  const total    = s2.length;
+  const pipeline = s2.filter(o=>['Confirmed+RETURN','Confirmed+EXCHANGE','Ready','Shipped'].includes(o.s2)).length;
+  const ret      = s2.filter(o=>o.s2==='Confirmed+RETURN').length;
+  const exc      = s2.filter(o=>o.s2==='Confirmed+EXCHANGE').length;
+
+  document.querySelector('#s2Total .s2k-val').textContent    = total.toLocaleString('en-US');
+  document.querySelector('#s2Pipeline .s2k-val').textContent = pipeline.toLocaleString('en-US');
+  document.querySelector('#s2Return .s2k-val').textContent   = ret.toLocaleString('en-US');
+  document.querySelector('#s2Exchange .s2k-val').textContent = exc.toLocaleString('en-US');
+
+  killChart('s2');
+  const counts=S2_STAGES.map(st=>s2.filter(o=>o.s2===st).length);
+  const ctx=document.getElementById('chartS2').getContext('2d');
+  CH.s2=new Chart(ctx,{
+    type:'bar',
+    data:{ labels:S2_STAGES, datasets:[{ data:counts, backgroundColor:S2_COLORS, borderRadius:4 }] },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ beginAtZero:true, ticks:{ font:{...FONT_MONO,size:10} } },
+        y:{ ticks:{ font:{...FONT_MAIN,size:11} } },
+      },
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RECOMMENDATIONS
+// ═══════════════════════════════════════════════════════════════
+function renderRecs(orders){
+  const s1=orders.filter(o=>!o.s2);
+  const total=s1.length;
+  const delivered=s1.filter(o=>o.s1==='Delivered').length;
+  const returned =s1.filter(o=>o.s1==='Returned').length;
+  const cancelled=s1.filter(o=>o.s1==='Cancelled').length;
+  const ready    =s1.filter(o=>o.s1==='Ready').length;
+  const cancRate = total>0 ? (cancelled/total)*100 : 0;
+  const s2Pend   = orders.filter(o=>o.s2&&['Confirmed+RETURN','Confirmed+EXCHANGE','Ready','Shipped'].includes(o.s2)).length;
+  const blank    = orders.filter(o=>o.zone==='BLANK').length;
+  const blankRate= total>0 ? (blank/total)*100 : 0;
+
+  const recs=[];
+
+  if(cancRate>35) recs.push({ cls:'rec-u', icon:'🚨',
+    title:`معدل إلغاء مرتفع — ${cancRate.toFixed(1)}%`,
+    body:`${cancelled.toLocaleString('en-US')} أوردر ملغي من أصل ${total.toLocaleString('en-US')} في الفترة المختارة` });
+
+  // courier return rate check
+  const cm={};
+  s1.filter(o=>o.courier).forEach(o=>{
+    if(!cm[o.courier]) cm[o.courier]={d:0,r:0};
+    if(o.s1==='Delivered') cm[o.courier].d++;
+    if(o.s1==='Returned')  cm[o.courier].r++;
+  });
+  Object.entries(cm).forEach(([name,c])=>{
+    const t=c.d+c.r;
+    if(t>=20 && (c.r/t)*100>25){
+      recs.push({ cls:'rec-i', icon:'⚠️',
+        title:`أداء ${name} يحتاج مراجعة`,
+        body:`معدل مرتجعات ${((c.r/t)*100).toFixed(1)}% على ${t.toLocaleString('en-US')} أوردر` });
     }
+  });
 
-    // ─── Settings Logic ──────────────────────────────────────────────────────
-    function getConfig() {
-      try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }
-      catch { return {}; }
-    }
-    function saveConfig(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
-    function isConfigured() {
-      const c = getConfig();
-      return c.workerUrl?.startsWith("http") && c.secret?.length > 0;
-    }
+  if(s2Pend>15) recs.push({ cls:'rec-i', icon:'🔄',
+    title:`${s2Pend.toLocaleString('en-US')} أوردر S2 في الانتظار`,
+    body:'أوردرات مرتجعة/استبدال لسه ما اتبعتش مجدداً' });
 
-    function openSettings() {
-      const c = getConfig();
-      document.getElementById('cfgUrl').value = c.workerUrl || "";
-      document.getElementById('cfgSecret').value = c.secret || "";
-      document.getElementById('settingsModal').classList.add('open');
-    }
-    function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
-    function saveSettings() {
-      let url = document.getElementById('cfgUrl').value.trim();
-      const secret = document.getElementById('cfgSecret').value.trim();
-      if(url.endsWith('/')) url = url.slice(0, -1);
-      
-      saveConfig({ workerUrl: url, secret });
-      closeSettings();
-      showToast("تم حفظ الإعدادات بنجاح", "var(--green)");
-      fetchData();
-    }
+  if(blankRate>15) recs.push({ cls:'rec-m', icon:'📍',
+    title:`${blank.toLocaleString('en-US')} أوردر بدون منطقة (BLANK)`,
+    body:`${blankRate.toFixed(1)}% من الأوردرات — غياب المنطقة يؤثر على توزيع الكوريير` });
 
-    // ─── API & Data Fetching ─────────────────────────────────────────────────
-    async function apiPost(path, body = {}) {
-      if (!isConfigured()) throw new Error("الإعدادات غير مكتملة");
-      const { workerUrl, secret } = getConfig();
+  if(ready>100) recs.push({ cls:'rec-m', icon:'📦',
+    title:`${ready.toLocaleString('en-US')} أوردر جاهز ولم يُشحن بعد`,
+    body:'تراكم في مرحلة Ready — يشير لضغط على الكوريير' });
 
-      const resp = await fetch(`${workerUrl}${path}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${secret}`
-        },
-        body: JSON.stringify(body),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-      return data;
-    }
+  if(!recs.length) recs.push({ cls:'rec-ok', icon:'✅',
+    title:'لا توصيات في الوقت الحالي',
+    body:'جميع المؤشرات ضمن النطاقات الطبيعية' });
 
-    function showState(state) {
-      document.getElementById('loadingState').classList.remove('active');
-      document.getElementById('errorState').classList.remove('active');
-      document.getElementById('dashboard').classList.remove('active');
-      
-      if(state === 'loading') document.getElementById('loadingState').classList.add('active');
-      else if(state === 'error') document.getElementById('errorState').classList.add('active');
-      else if(state === 'success') document.getElementById('dashboard').classList.add('active');
-    }
+  document.getElementById('recs').innerHTML = recs.map(r=>`
+    <div class="rec ${r.cls}">
+      <div class="rec-icon">${r.icon}</div>
+      <div>
+        <div class="rec-title">${r.title}</div>
+        <div class="rec-body">${r.body}</div>
+      </div>
+    </div>`).join('');
+}
 
-    async function fetchData(forceRefresh = false) {
-      if(!isConfigured()) return;
-      showState('loading');
-      
-      const dateFrom = document.getElementById('filterDateFrom').value;
-      const dateTo = document.getElementById('filterDateTo').value;
+// ═══════════════════════════════════════════════════════════════
+// TABLE
+// ═══════════════════════════════════════════════════════════════
+function sortBy(k){
+  sortDir = sortKey===k ? sortDir*-1 : -1;
+  sortKey = k;
+  renderTable();
+}
 
-      try {
-        // If force refresh, we could ideally call DELETE /cache first, but for simplicity,
-        // we'll rely on the 15m TTL or let user clear cache if we implement a specific button.
-        if (forceRefresh) {
-            await apiPost('/cache', {}).catch(e => console.warn("Cache clear issue", e));
-        }
+const S1_BADGE_CLS = {
+  'New Order':'b-new','Confirmed':'b-confirmed','Ready':'b-ready','Shipped':'b-shipped',
+  'Delivered':'b-delivered','Returned':'b-returned','Cancelled':'b-cancelled','غير محدد':'b-unknown',
+};
+const ZONE_BADGE_CLS = {
+  'Cairo+Giza':'bz-cairo','Other_Regions':'bz-other','Show_Room':'bz-show','BLANK':'bz-blank',
+};
 
-        const response = await apiPost('/data', { dateFrom, dateTo });
-        allData = response.data || [];
-        
-        // Update Timestamp
-        if(response.cachedAt) {
-          const d = new Date(response.cachedAt);
-          document.getElementById('lastUpdatedBadge').innerText = `آخر تحديث: ${formatDateTime(d)}`;
-        }
+function sbadge(val, clsMap, def='b-unknown'){
+  const cls=clsMap[val]||def;
+  return `<span class="sbadge ${cls}">${val||'—'}</span>`;
+}
 
-        populateFilterOptions();
-        applyFilters();
-        showState('success');
-      } catch(err) {
-        document.getElementById('errorMessage').innerText = err.message;
-        showState('error');
-      }
-    }
+function renderTable(){
+  const q=(document.getElementById('tSearch').value||'').toLowerCase();
+  let rows = filteredOrds.filter(o=>{
+    if(!q) return true;
+    return o.name.toLowerCase().includes(q)||o.customerName.toLowerCase().includes(q);
+  });
+  rows=[...rows].sort((a,b)=>{
+    let va=a[sortKey]??'', vb=b[sortKey]??'';
+    if(typeof va==='number') return (va-vb)*sortDir;
+    return va.toString().localeCompare(vb.toString(),'ar')*sortDir;
+  });
 
-    // ─── Filters & Rendering ─────────────────────────────────────────────────
-    function getUniqueValues(key) {
-      const vals = new Set();
-      allData.forEach(item => {
-        if(item[key] && item[key].trim() !== '') vals.add(item[key].trim());
-      });
-      return Array.from(vals).sort();
-    }
+  const total=rows.length;
+  const totalPg=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  if(currentPage>totalPg) currentPage=1;
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=rows.slice(start,start+PAGE_SIZE);
 
-    function populateFilterOptions() {
-      const renderSelect = (id, values) => {
-        const select = document.getElementById(id);
-        const currentVal = select.value;
-        select.innerHTML = '<option value="ALL">الكل</option>';
-        values.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v; opt.innerText = v;
-          select.appendChild(opt);
-        });
-        if(values.includes(currentVal)) select.value = currentVal;
-      };
+  document.getElementById('tInfo').textContent =
+    `${total.toLocaleString('en-US')} أوردر — صفحة ${currentPage} / ${totalPg}`;
 
-      renderSelect('filterCourier', getUniqueValues('courier'));
-      renderSelect('filterS1', getUniqueValues('s1Status'));
-      renderSelect('filterS2', getUniqueValues('s2Status'));
-    }
+  const numId = id => id.split('/').pop();
+  const orderUrl = id => shopDomain
+    ? `https://${shopDomain}/admin/orders/${numId(id)}`
+    : `https://admin.shopify.com/store/6c7e1a-53/orders/${numId(id)}`;
 
-    function applyFilters() {
-      const courier = document.getElementById('filterCourier').value;
-      const s1 = document.getElementById('filterS1').value;
-      const s2 = document.getElementById('filterS2').value;
+  document.getElementById('tBody').innerHTML = page.map(o=>`
+    <tr>
+      <td><a class="olink" href="${orderUrl(o.id)}" target="_blank">${o.name}</a></td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--text-secondary);font-size:11px">${o.date}</td>
+      <td>${o.customerName||'—'}</td>
+      <td style="text-align:center;font-family:'IBM Plex Mono',monospace">${o.totalItems}</td>
+      <td>${o.courier||'—'}</td>
+      <td>${sbadge(o.zone,ZONE_BADGE_CLS,'bz-blank')}</td>
+      <td>${sbadge(o.s1,S1_BADGE_CLS)}</td>
+      <td>${o.s2 ? sbadge(o.s2,{},'b-confirmed') : '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td><span class="sbadge ${o.returnStatus==='RETURNED'?'b-ret':'b-nret'}">${o.returnStatus}</span></td>
+    </tr>`).join('');
 
-      filteredData = allData.filter(d => {
-        const matchCourier = courier === 'ALL' || d.courier === courier;
-        const matchS1 = s1 === 'ALL' || d.s1Status === s1;
-        const matchS2 = s2 === 'ALL' || d.s2Status === s2;
-        return matchCourier && matchS1 && matchS2;
-      });
+  // Pagination
+  const pg=document.getElementById('tPag');
+  if(totalPg<=1){ pg.innerHTML=''; return; }
+  const range=[];
+  for(let i=1;i<=totalPg;i++){
+    if(i===1||i===totalPg||Math.abs(i-currentPage)<=2) range.push(i);
+    else if(range[range.length-1]!=='…') range.push('…');
+  }
+  let html=`<button class="pgbtn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>›</button>`;
+  range.forEach(p=>{
+    if(p==='…') html+=`<span class="pgdots">…</span>`;
+    else html+=`<button class="pgbtn ${p===currentPage?'on':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+  html+=`<button class="pgbtn" onclick="goPage(${currentPage+1})" ${currentPage===totalPg?'disabled':''}>‹</button>`;
+  pg.innerHTML=html;
+}
 
-      renderKPIs();
-      renderTable();
-      renderCharts();
-      generateRecommendations();
-    }
+function goPage(p){ currentPage=p; renderTable(); }
 
-    // ─── Render Components ───────────────────────────────────────────────────
-    function renderKPIs() {
-      document.getElementById('kpiTotal').innerText = Number(filteredData.length).toLocaleString('en-US');
+// ═══════════════════════════════════════════════════════════════
+// EXPORT XLSX
+// ═══════════════════════════════════════════════════════════════
+async function exportXLSX(){
+  const wb=new ExcelJS.Workbook();
+  wb.views=[{rightToLeft:true}];
+  const ws=wb.addWorksheet('Orders',{views:[{state:'frozen',ySplit:1,rightToLeft:true}]});
+  ws.columns=[
+    {header:'رقم الأوردر',    key:'name',         width:14},
+    {header:'التاريخ',         key:'date',         width:12},
+    {header:'العميل',          key:'customerName', width:22},
+    {header:'الهاتف',          key:'customerPhone',width:15},
+    {header:'عدد المنتجات',   key:'totalItems',   width:12},
+    {header:'الكوريير',        key:'courier',      width:16},
+    {header:'المنطقة',         key:'zone',         width:15},
+    {header:'S1',              key:'s1',           width:18},
+    {header:'S2',              key:'s2',           width:22},
+    {header:'Return Status',   key:'returnStatus', width:15},
+    {header:'Bosta Tracking',  key:'bostaTracking',width:20},
+  ];
+  ws.getRow(1).eachCell(cell=>{
+    cell.font={bold:true,color:{argb:'FFFFFFFF'}};
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF2563EB'}};
+    cell.alignment={horizontal:'center',vertical:'middle'};
+  });
+  ws.getRow(1).height=22;
+  filteredOrds.forEach(o=>{
+    ws.addRow({
+      name:o.name, date:o.date, customerName:o.customerName,
+      customerPhone:o.customerPhone, totalItems:o.totalItems,
+      courier:o.courier, zone:o.zone, s1:o.s1,
+      s2:o.s2||null, returnStatus:o.returnStatus, bostaTracking:o.bostaTracking||null,
+    });
+  });
+  ws.eachRow((row,i)=>{
+    if(i>1) row.eachCell(cell=>{
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:i%2===0?'FFF8FAFC':'FFFFFFFF'}};
+      cell.alignment={vertical:'middle'};
+    });
+  });
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`orders-status-${flt.dateFrom}-${flt.dateTo}.xlsx`;
+  a.click();
+}
 
-      // S1 Success Rate logic (Delivered / (Shipped + Delivered)) *rough metric
-      const s1ShippedOrDelivered = filteredData.filter(d => 
-        d.s1Status?.toLowerCase().includes('shipped') || d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.toLowerCase().includes('تم التوصيل')
-      ).length;
-      
-      const s1Delivered = filteredData.filter(d => 
-        d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.toLowerCase().includes('تم التوصيل')
-      ).length;
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════
+function openSettings(){
+  const c=getCfg();
+  document.getElementById('cfgUrl').value    = c.workerUrl||'';
+  document.getElementById('cfgSecret').value = c.secret||'';
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function closeSettings(){ document.getElementById('settingsOverlay').classList.remove('open'); }
+function saveSettings(){
+  saveCfg({
+    workerUrl: document.getElementById('cfgUrl').value.trim().replace(/\/$/,''),
+    secret:    document.getElementById('cfgSecret').value.trim(),
+  });
+  closeSettings();
+  loadData();
+}
 
-      const rate = s1ShippedOrDelivered > 0 ? ((s1Delivered / s1ShippedOrDelivered) * 100).toFixed(1) : 0;
-      document.getElementById('kpiSuccessRate').innerText = `${Number(rate).toLocaleString('en-US')}%`;
+// ── Close modal on overlay click ──────────────────────────────
+document.getElementById('settingsOverlay').addEventListener('click',e=>{
+  if(e.target===e.currentTarget) closeSettings();
+});
 
-      // S2 Returns logic
-      const returns = filteredData.filter(d => d.s2Status && d.s2Status.trim() !== '').length;
-      const returnsPct = filteredData.length > 0 ? ((returns / filteredData.length) * 100).toFixed(1) : 0;
-      document.getElementById('kpiReturns').innerText = Number(returns).toLocaleString('en-US');
-      document.getElementById('kpiReturnsSub').innerText = `${Number(returnsPct).toLocaleString('en-US')}% من الإجمالي`;
-
-      // No Courier logic
-      const noCourier = filteredData.filter(d => !d.courier || d.courier.trim() === '').length;
-      document.getElementById('kpiNoCourier').innerText = Number(noCourier).toLocaleString('en-US');
-    }
-
-    function getStatusClass(status) {
-      if(!status) return '';
-      const s = status.toLowerCase();
-      if(s.includes('delivered') || s.includes('تم التوصيل')) return 'delivered';
-      if(s.includes('return') || s.includes('cancelled') || s.includes('مرتجع')) return 'returned';
-      return '';
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
-
-      filteredData.slice(0, 100).forEach(row => { // Limit render to 100 for UI perf
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-          <td><span class="mono">${row.name}</span></td>
-          <td class="mono">${formatDate(row.createdAt)}</td>
-          <td>
-            <div>${row.customerName}</div>
-            <div class="text-muted mono">${row.customerPhone}</div>
-          </td>
-          <td><span class="status-pill ${getStatusClass(row.s1Status)}">${row.s1Status || '-'}</span></td>
-          <td><span class="status-pill ${getStatusClass(row.s2Status)}">${row.s2Status || '-'}</span></td>
-          <td>${row.courier || '-'}</td>
-          <td>${row.zone || '-'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      if(filteredData.length > 100) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="7" style="text-align:center; color:var(--text-muted);">تم عرض أحدث 100 أوردر فقط. قم بتصدير الملف لرؤية الكل (${filteredData.length}).</td>`;
-        tbody.appendChild(tr);
-      }
-    }
-
-    // ─── Charts (Chart.js) ───────────────────────────────────────────────────
-    function renderCharts() {
-      Chart.defaults.font.family = "'Noto Sans Arabic', sans-serif";
-      Chart.defaults.color = '#6b7280';
-
-      // 1. Line Chart (Orders over time)
-      const datesCount = {};
-      filteredData.forEach(d => {
-        const date = d.createdAt.split('T')[0];
-        datesCount[date] = (datesCount[date] || 0) + 1;
-      });
-      const sortedDates = Object.keys(datesCount).sort();
-      const lineData = sortedDates.map(k => datesCount[k]);
-
-      if(chartLine) chartLine.destroy();
-      chartLine = new Chart(document.getElementById('lineChart'), {
-        type: 'line',
-        data: {
-          labels: sortedDates,
-          datasets: [{
-            label: 'عدد الطلبات',
-            data: lineData,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      // 2. S1 Donut
-      const s1Counts = {};
-      filteredData.forEach(d => {
-        const s = d.s1Status || 'بدون حالة';
-        s1Counts[s] = (s1Counts[s] || 0) + 1;
-      });
-      if(chartS1) chartS1.destroy();
-      chartS1 = new Chart(document.getElementById('s1Donut'), {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(s1Counts),
-          datasets: [{
-            data: Object.values(s1Counts),
-            backgroundColor: ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#8b5cf6', '#e5e7eb']
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', rtl: true } } }
-      });
-
-      // 3. Courier Bar
-      const courierStats = {};
-      filteredData.forEach(d => {
-        const c = d.courier || 'بدون مندوب';
-        if(!courierStats[c]) courierStats[c] = { total: 0, delivered: 0, returned: 0 };
-        courierStats[c].total++;
-        if(d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.includes('تم التوصيل')) courierStats[c].delivered++;
-        if(d.s2Status?.toLowerCase().includes('return') || d.s2Status?.includes('مرتجع')) courierStats[c].returned++;
-      });
-      
-      const couriers = Object.keys(courierStats).sort((a,b) => courierStats[b].total - courierStats[a].total).slice(0,10); // top 10
-
-      if(chartCourier) chartCourier.destroy();
-      chartCourier = new Chart(document.getElementById('courierBar'), {
-        type: 'bar',
-        data: {
-          labels: couriers,
-          datasets: [
-            { label: 'مسلم', data: couriers.map(c => courierStats[c].delivered), backgroundColor: '#16a34a' },
-            { label: 'مرتجع', data: couriers.map(c => courierStats[c].returned), backgroundColor: '#dc2626' }
-          ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
-      });
-    }
-
-    // ─── Recommendations ─────────────────────────────────────────────────────
-    function generateRecommendations() {
-      const container = document.getElementById('recommendationsContainer');
-      container.innerHTML = '';
-      const recs = [];
-
-      // Rule 1: No Courier
-      const noCourier = filteredData.filter(d => !d.courier || d.courier.trim() === '');
-      if(noCourier.length > 0) {
-        recs.push({ type: 'warning', icon: '🟡', text: `يوجد [${noCourier.length}] أوردر بدون شركة شحن معينة.` });
-      }
-
-      // Rule 2: High returns per courier
-      const couriers = getUniqueValues('courier');
-      couriers.forEach(c => {
-        const cData = filteredData.filter(d => d.courier === c);
-        const cReturns = cData.filter(d => d.s2Status?.toLowerCase().includes('return') || d.s2Status?.includes('مرتجع')).length;
-        if(cData.length > 10 && (cReturns / cData.length) > 0.25) {
-          recs.push({ type: 'urgent', icon: '🔴', text: `مندوب/شركة [${c}] تتخطى نسبة المرتجعات لديه 25% من إجمالي أوردراته (${cData.length}).` });
-        }
-      });
-
-      // Render
-      if(recs.length === 0) {
-        container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا توجد تنبيهات عاجلة حالياً. الأداء مستقر.</div>`;
-        return;
-      }
-
-      recs.sort((a,b) => (a.type === 'urgent' ? -1 : 1)).forEach(r => {
-        const div = document.createElement('div');
-        div.className = `rec-card ${r.type}`;
-        div.innerHTML = `<div class="rec-icon">${r.icon}</div><div class="rec-text">${r.text}</div>`;
-        container.appendChild(div);
-      });
-    }
-
-    // ─── Export XLSX (ExcelJS) ───────────────────────────────────────────────
-    async function exportData() {
-      if(filteredData.length === 0) return showToast("لا توجد بيانات للتصدير", "var(--amber)");
-
-      const wb = new ExcelJS.Workbook();
-      wb.views = [{ rightToLeft: true }]; 
-      
-      const ws = wb.addWorksheet('طلبات');
-      ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
-
-      ws.columns = [
-        { header: 'Order Name', key: 'name', width: 15 },
-        { header: 'Created At', key: 'createdAt', width: 20 },
-        { header: 'Customer Name', key: 'customerName', width: 25 },
-        { header: 'Customer Phone', key: 'customerPhone', width: 20 },
-        { header: 'S1 Status', key: 's1Status', width: 25 },
-        { header: 'S2 Status', key: 's2Status', width: 25 },
-        { header: 'Courier', key: 'courier', width: 20 },
-        { header: 'Zone', key: 'zone', width: 20 },
-        { header: 'Tags', key: 'tags', width: 40 }
-      ];
-
-      filteredData.forEach(r => {
-        ws.addRow({
-          name: r.name || null,
-          createdAt: formatDate(r.createdAt) || null,
-          customerName: r.customerName || null,
-          customerPhone: r.customerPhone || null,
-          s1Status: r.s1Status || null,
-          s2Status: r.s2Status || null,
-          courier: r.courier || null,
-          zone: r.zone || null,
-          tags: (r.tags || []).join(', ') || null
-        });
-      });
-
-      const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const todayStr = new Date().toISOString().split('T')[0];
-      a.download = `Orders-Dashboard-${todayStr}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // ─── Utils ───────────────────────────────────────────────────────────────
-    function formatDateTime(isoString) {
-      if(!isoString) return '';
-      const d = new Date(isoString);
-      const pad = n => String(n).padStart(2, '0');
-      let hours = d.getHours();
-      const minutes = pad(d.getMinutes());
-      const ampm = hours >= 12 ? 'مساءً' : 'صباحاً';
-      hours = hours % 12 || 12;
-      return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(hours)}:${minutes} ${ampm}`;
-    }
-
-    function formatDate(isoString) {
-      if(!isoString) return '';
-      const d = new Date(isoString);
-      const pad = n => String(n).padStart(2, '0');
-      return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`;
-    }
-
-    function showToast(msg, bg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.style.backgroundColor = bg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
-  </script>
+// ═══════════════════════════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════════════════════════
+init();
+</script>
 </body>
 </html>
