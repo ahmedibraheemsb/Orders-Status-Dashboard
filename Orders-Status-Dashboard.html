@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcomModa - لوحة متابعة الطلبات</title>
+  
+  <!-- Fonts: Noto Sans Arabic (Text) + IBM Plex Mono (Numbers/Tech) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Libraries: Chart.js & ExcelJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+
+  <style>
+    /* CSS Variables (EcomModa Standard) */
+    :root {
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --surface-2: #f9fafb;
+      --border: #e5e7eb;
+      --border-strong: #d1d5db;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #6b7280;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --accent-dark: #1d4ed8;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Noto Sans Arabic', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      padding-bottom: 50px;
+    }
+
+    /* Typography Utilities */
+    .mono { font-family: 'IBM Plex Mono', monospace; direction: ltr; display: inline-block; }
+    .text-muted { color: var(--text-muted); font-size: 12px; }
+
+    /* Header */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .brand { font-size: 17px; font-weight: 700; color: var(--accent); }
+    .header-actions { display: flex; gap: 12px; align-items: center; }
+    
+    /* Data Badge */
+    .data-badge {
+      font-size: 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+    }
+
+    /* Buttons */
+    button {
+      font-family: inherit;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-outline { background: white; border: 1px solid var(--border-strong); color: var(--text-primary); }
+    .btn-outline:hover { background: var(--surface-2); }
+    .btn-icon { padding: 8px; font-size: 16px; background: transparent; border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;}
+
+    /* States (Loading/Error) */
+    .state-box {
+      margin: 40px auto;
+      max-width: 400px;
+      padding: 30px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      text-align: center;
+      display: none; /* hidden by default */
+    }
+    .state-box.active { display: block; }
+    .state-icon { font-size: 40px; margin-bottom: 16px; }
+    .spinner {
+      width: 40px; height: 40px; margin: 0 auto 16px;
+      border: 4px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Main Dashboard Layout */
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 24px auto;
+      padding: 0 24px;
+      display: none; /* hidden until data loads */
+    }
+    .dashboard-container.active { display: block; }
+
+    /* Filters Bar */
+    .filters-bar {
+      background: var(--surface);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+    .filter-group input, .filter-group select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      min-width: 150px;
+    }
+    /* Date inputs specifically use Mono */
+    input[type="date"] { font-family: 'IBM Plex Mono', monospace; }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border-right: 4px solid var(--accent);
+    }
+    .kpi-card.green { border-right-color: var(--green); }
+    .kpi-card.amber { border-right-color: var(--amber); }
+    .kpi-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-primary); }
+    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .chart-card h3 { font-size: 14px; margin-bottom: 16px; color: var(--text-primary); }
+    .chart-container { position: relative; height: 300px; width: 100%; }
+
+    /* Recommendations */
+    .recommendations {
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rec-card {
+      background: var(--surface);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border);
+    }
+    .rec-card.urgent { background: var(--red-light); border-color: var(--red); color: var(--red); }
+    .rec-card.warning { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+    .rec-icon { font-size: 20px; }
+    .rec-text { font-size: 14px; font-weight: 500; }
+
+    /* Table */
+    .table-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .table-responsive { overflow-x: auto; max-height: 600px; }
+    table { width: 100%; border-collapse: collapse; text-align: right; }
+    th {
+      background: var(--surface-2);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:hover td { background: var(--surface-2); }
+    .status-pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      color: var(--text-secondary);
+    }
+    .status-pill.delivered { background: var(--green-light); color: var(--green); }
+    .status-pill.returned { background: var(--red-light); color: var(--red); }
+
+    /* Settings Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); padding: 24px; border-radius: var(--radius);
+      width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .modal h2 { font-size: 17px; margin-bottom: 16px; }
+    .modal .form-group { margin-bottom: 16px; }
+    .modal label { display: block; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary); }
+    .modal input { width: 100%; padding: 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: 'IBM Plex Mono', monospace; font-size: 13px; direction: ltr; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      padding: 12px 24px; border-radius: var(--radius-sm); color: white;
+      font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none;
+      transition: opacity 0.3s; z-index: 2000;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">EcomModa | أوامر التشغيل</div>
+    <div class="header-actions">
+      <div class="data-badge" id="lastUpdatedBadge">لم يتم التحديث</div>
+      <button class="btn-outline" onclick="openSettings()" title="الإعدادات">⚙️</button>
+      <button class="btn-outline" onclick="exportData()">تصدير XLSX</button>
+      <button class="btn-primary" onclick="fetchData(true)">تحديث البيانات</button>
+    </div>
+  </header>
+
+  <!-- States -->
+  <div id="loadingState" class="state-box">
+    <div class="spinner"></div>
+    <p>جاري جلب البيانات من Shopify...</p>
+  </div>
+  <div id="errorState" class="state-box">
+    <div class="state-icon">⚠️</div>
+    <p id="errorMessage" style="color: var(--red); margin-bottom: 16px;"></p>
+    <button class="btn-primary" onclick="fetchData()">إعادة المحاولة</button>
+    <button class="btn-outline" onclick="openSettings()" style="margin-right: 8px;">الإعدادات</button>
+  </div>
+
+  <!-- Main Dashboard -->
+  <main id="dashboard" class="dashboard-container">
+    
+    <!-- Filters Bar -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label>من تاريخ</label>
+        <input type="date" id="filterDateFrom" onchange="fetchData(true)">
+      </div>
+      <div class="filter-group">
+        <label>إلى تاريخ</label>
+        <input type="date" id="filterDateTo" onchange="fetchData(true)">
+      </div>
+      <div class="filter-group">
+        <label>شركة الشحن</label>
+        <select id="filterCourier" onchange="applyFilters()">
+          <option value="ALL">الكل</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>حالة S1</label>
+        <select id="filterS1" onchange="applyFilters()">
+          <option value="ALL">الكل</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>حالة S2</label>
+        <select id="filterS2" onchange="applyFilters()">
+          <option value="ALL">الكل</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">إجمالي الطلبات</div>
+        <div class="kpi-value" id="kpiTotal">0</div>
+        <div class="kpi-sub">في الفترة المحددة</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-title">معدل التسليم الناجح (S1)</div>
+        <div class="kpi-value" id="kpiSuccessRate">0%</div>
+        <div class="kpi-sub">المسلم / إجمالي المشحون</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-title">إجمالي المرتجعات (S2)</div>
+        <div class="kpi-value" id="kpiReturns">0</div>
+        <div class="kpi-sub" id="kpiReturnsSub">0% من الإجمالي</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">طلبات بدون شركة شحن</div>
+        <div class="kpi-value" id="kpiNoCourier">0</div>
+        <div class="kpi-sub">تحتاج لتعيين مندوب</div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations" id="recommendationsContainer">
+      <!-- Injected via JS -->
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card" style="grid-column: span 2;">
+        <h3>حركة الطلبات اليومية</h3>
+        <div class="chart-container"><canvas id="lineChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>توزيع حالات الشحن الأساسي (S1)</h3>
+        <div class="chart-container"><canvas id="s1Donut"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>أداء شركات الشحن (مسلم مقابل مرتجع)</h3>
+        <div class="chart-container"><canvas id="courierBar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الأوردر</th>
+              <th>التاريخ</th>
+              <th>العميل</th>
+              <th>S1 Status</th>
+              <th>S2 Status</th>
+              <th>شركة الشحن</th>
+              <th>المنطقة (Zone)</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Injected via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>إعدادات الربط</h2>
+      <div class="form-group">
+        <label>رابط الـ Worker (URL)</label>
+        <input type="text" id="cfgUrl" placeholder="https://orders-dash.ecommoda24.workers.dev">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور (Worker Secret)</label>
+        <input type="password" id="cfgSecret" placeholder="••••••••">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeSettings()">إلغاء</button>
+        <button class="btn-primary" onclick="saveSettings()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script>
+    // ─── Configuration & State ───────────────────────────────────────────────
+    const CFG_KEY = "tool_orders_dashboard_cfg";
+    let allData = [];
+    let filteredData = [];
+    
+    // Chart instances for destroying before re-render
+    let chartLine = null;
+    let chartS1 = null;
+    let chartCourier = null;
+
+    // ─── Init ────────────────────────────────────────────────────────────────
+    window.onload = () => {
+      setDefaultDates();
+      if (!isConfigured()) {
+        openSettings();
+      } else {
+        fetchData();
+      }
+    };
+
+    function setDefaultDates() {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
+      
+      document.getElementById('filterDateFrom').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('filterDateTo').value = lastDay.toISOString().split('T')[0];
+    }
+
+    // ─── Settings Logic ──────────────────────────────────────────────────────
+    function getConfig() {
+      try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }
+      catch { return {}; }
+    }
+    function saveConfig(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+    function isConfigured() {
+      const c = getConfig();
+      return c.workerUrl?.startsWith("http") && c.secret?.length > 0;
+    }
+
+    function openSettings() {
+      const c = getConfig();
+      document.getElementById('cfgUrl').value = c.workerUrl || "";
+      document.getElementById('cfgSecret').value = c.secret || "";
+      document.getElementById('settingsModal').classList.add('open');
+    }
+    function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+    function saveSettings() {
+      let url = document.getElementById('cfgUrl').value.trim();
+      const secret = document.getElementById('cfgSecret').value.trim();
+      if(url.endsWith('/')) url = url.slice(0, -1);
+      
+      saveConfig({ workerUrl: url, secret });
+      closeSettings();
+      showToast("تم حفظ الإعدادات بنجاح", "var(--green)");
+      fetchData();
+    }
+
+    // ─── API & Data Fetching ─────────────────────────────────────────────────
+    async function apiPost(path, body = {}) {
+      if (!isConfigured()) throw new Error("الإعدادات غير مكتملة");
+      const { workerUrl, secret } = getConfig();
+
+      const resp = await fetch(`${workerUrl}${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${secret}`
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+      return data;
+    }
+
+    function showState(state) {
+      document.getElementById('loadingState').classList.remove('active');
+      document.getElementById('errorState').classList.remove('active');
+      document.getElementById('dashboard').classList.remove('active');
+      
+      if(state === 'loading') document.getElementById('loadingState').classList.add('active');
+      else if(state === 'error') document.getElementById('errorState').classList.add('active');
+      else if(state === 'success') document.getElementById('dashboard').classList.add('active');
+    }
+
+    async function fetchData(forceRefresh = false) {
+      if(!isConfigured()) return;
+      showState('loading');
+      
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+
+      try {
+        // If force refresh, we could ideally call DELETE /cache first, but for simplicity,
+        // we'll rely on the 15m TTL or let user clear cache if we implement a specific button.
+        if (forceRefresh) {
+            await apiPost('/cache', {}).catch(e => console.warn("Cache clear issue", e));
+        }
+
+        const response = await apiPost('/data', { dateFrom, dateTo });
+        allData = response.data || [];
+        
+        // Update Timestamp
+        if(response.cachedAt) {
+          const d = new Date(response.cachedAt);
+          document.getElementById('lastUpdatedBadge').innerText = `آخر تحديث: ${formatDateTime(d)}`;
+        }
+
+        populateFilterOptions();
+        applyFilters();
+        showState('success');
+      } catch(err) {
+        document.getElementById('errorMessage').innerText = err.message;
+        showState('error');
+      }
+    }
+
+    // ─── Filters & Rendering ─────────────────────────────────────────────────
+    function getUniqueValues(key) {
+      const vals = new Set();
+      allData.forEach(item => {
+        if(item[key] && item[key].trim() !== '') vals.add(item[key].trim());
+      });
+      return Array.from(vals).sort();
+    }
+
+    function populateFilterOptions() {
+      const renderSelect = (id, values) => {
+        const select = document.getElementById(id);
+        const currentVal = select.value;
+        select.innerHTML = '<option value="ALL">الكل</option>';
+        values.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v; opt.innerText = v;
+          select.appendChild(opt);
+        });
+        if(values.includes(currentVal)) select.value = currentVal;
+      };
+
+      renderSelect('filterCourier', getUniqueValues('courier'));
+      renderSelect('filterS1', getUniqueValues('s1Status'));
+      renderSelect('filterS2', getUniqueValues('s2Status'));
+    }
+
+    function applyFilters() {
+      const courier = document.getElementById('filterCourier').value;
+      const s1 = document.getElementById('filterS1').value;
+      const s2 = document.getElementById('filterS2').value;
+
+      filteredData = allData.filter(d => {
+        const matchCourier = courier === 'ALL' || d.courier === courier;
+        const matchS1 = s1 === 'ALL' || d.s1Status === s1;
+        const matchS2 = s2 === 'ALL' || d.s2Status === s2;
+        return matchCourier && matchS1 && matchS2;
+      });
+
+      renderKPIs();
+      renderTable();
+      renderCharts();
+      generateRecommendations();
+    }
+
+    // ─── Render Components ───────────────────────────────────────────────────
+    function renderKPIs() {
+      document.getElementById('kpiTotal').innerText = Number(filteredData.length).toLocaleString('en-US');
+
+      // S1 Success Rate logic (Delivered / (Shipped + Delivered)) *rough metric
+      const s1ShippedOrDelivered = filteredData.filter(d => 
+        d.s1Status?.toLowerCase().includes('shipped') || d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.toLowerCase().includes('تم التوصيل')
+      ).length;
+      
+      const s1Delivered = filteredData.filter(d => 
+        d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.toLowerCase().includes('تم التوصيل')
+      ).length;
+
+      const rate = s1ShippedOrDelivered > 0 ? ((s1Delivered / s1ShippedOrDelivered) * 100).toFixed(1) : 0;
+      document.getElementById('kpiSuccessRate').innerText = `${Number(rate).toLocaleString('en-US')}%`;
+
+      // S2 Returns logic
+      const returns = filteredData.filter(d => d.s2Status && d.s2Status.trim() !== '').length;
+      const returnsPct = filteredData.length > 0 ? ((returns / filteredData.length) * 100).toFixed(1) : 0;
+      document.getElementById('kpiReturns').innerText = Number(returns).toLocaleString('en-US');
+      document.getElementById('kpiReturnsSub').innerText = `${Number(returnsPct).toLocaleString('en-US')}% من الإجمالي`;
+
+      // No Courier logic
+      const noCourier = filteredData.filter(d => !d.courier || d.courier.trim() === '').length;
+      document.getElementById('kpiNoCourier').innerText = Number(noCourier).toLocaleString('en-US');
+    }
+
+    function getStatusClass(status) {
+      if(!status) return '';
+      const s = status.toLowerCase();
+      if(s.includes('delivered') || s.includes('تم التوصيل')) return 'delivered';
+      if(s.includes('return') || s.includes('cancelled') || s.includes('مرتجع')) return 'returned';
+      return '';
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      filteredData.slice(0, 100).forEach(row => { // Limit render to 100 for UI perf
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+          <td><span class="mono">${row.name}</span></td>
+          <td class="mono">${formatDate(row.createdAt)}</td>
+          <td>
+            <div>${row.customerName}</div>
+            <div class="text-muted mono">${row.customerPhone}</div>
+          </td>
+          <td><span class="status-pill ${getStatusClass(row.s1Status)}">${row.s1Status || '-'}</span></td>
+          <td><span class="status-pill ${getStatusClass(row.s2Status)}">${row.s2Status || '-'}</span></td>
+          <td>${row.courier || '-'}</td>
+          <td>${row.zone || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if(filteredData.length > 100) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" style="text-align:center; color:var(--text-muted);">تم عرض أحدث 100 أوردر فقط. قم بتصدير الملف لرؤية الكل (${filteredData.length}).</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // ─── Charts (Chart.js) ───────────────────────────────────────────────────
+    function renderCharts() {
+      Chart.defaults.font.family = "'Noto Sans Arabic', sans-serif";
+      Chart.defaults.color = '#6b7280';
+
+      // 1. Line Chart (Orders over time)
+      const datesCount = {};
+      filteredData.forEach(d => {
+        const date = d.createdAt.split('T')[0];
+        datesCount[date] = (datesCount[date] || 0) + 1;
+      });
+      const sortedDates = Object.keys(datesCount).sort();
+      const lineData = sortedDates.map(k => datesCount[k]);
+
+      if(chartLine) chartLine.destroy();
+      chartLine = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+          labels: sortedDates,
+          datasets: [{
+            label: 'عدد الطلبات',
+            data: lineData,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      // 2. S1 Donut
+      const s1Counts = {};
+      filteredData.forEach(d => {
+        const s = d.s1Status || 'بدون حالة';
+        s1Counts[s] = (s1Counts[s] || 0) + 1;
+      });
+      if(chartS1) chartS1.destroy();
+      chartS1 = new Chart(document.getElementById('s1Donut'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(s1Counts),
+          datasets: [{
+            data: Object.values(s1Counts),
+            backgroundColor: ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#8b5cf6', '#e5e7eb']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', rtl: true } } }
+      });
+
+      // 3. Courier Bar
+      const courierStats = {};
+      filteredData.forEach(d => {
+        const c = d.courier || 'بدون مندوب';
+        if(!courierStats[c]) courierStats[c] = { total: 0, delivered: 0, returned: 0 };
+        courierStats[c].total++;
+        if(d.s1Status?.toLowerCase().includes('delivered') || d.s1Status?.includes('تم التوصيل')) courierStats[c].delivered++;
+        if(d.s2Status?.toLowerCase().includes('return') || d.s2Status?.includes('مرتجع')) courierStats[c].returned++;
+      });
+      
+      const couriers = Object.keys(courierStats).sort((a,b) => courierStats[b].total - courierStats[a].total).slice(0,10); // top 10
+
+      if(chartCourier) chartCourier.destroy();
+      chartCourier = new Chart(document.getElementById('courierBar'), {
+        type: 'bar',
+        data: {
+          labels: couriers,
+          datasets: [
+            { label: 'مسلم', data: couriers.map(c => courierStats[c].delivered), backgroundColor: '#16a34a' },
+            { label: 'مرتجع', data: couriers.map(c => courierStats[c].returned), backgroundColor: '#dc2626' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+      });
+    }
+
+    // ─── Recommendations ─────────────────────────────────────────────────────
+    function generateRecommendations() {
+      const container = document.getElementById('recommendationsContainer');
+      container.innerHTML = '';
+      const recs = [];
+
+      // Rule 1: No Courier
+      const noCourier = filteredData.filter(d => !d.courier || d.courier.trim() === '');
+      if(noCourier.length > 0) {
+        recs.push({ type: 'warning', icon: '🟡', text: `يوجد [${noCourier.length}] أوردر بدون شركة شحن معينة.` });
+      }
+
+      // Rule 2: High returns per courier
+      const couriers = getUniqueValues('courier');
+      couriers.forEach(c => {
+        const cData = filteredData.filter(d => d.courier === c);
+        const cReturns = cData.filter(d => d.s2Status?.toLowerCase().includes('return') || d.s2Status?.includes('مرتجع')).length;
+        if(cData.length > 10 && (cReturns / cData.length) > 0.25) {
+          recs.push({ type: 'urgent', icon: '🔴', text: `مندوب/شركة [${c}] تتخطى نسبة المرتجعات لديه 25% من إجمالي أوردراته (${cData.length}).` });
+        }
+      });
+
+      // Render
+      if(recs.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا توجد تنبيهات عاجلة حالياً. الأداء مستقر.</div>`;
+        return;
+      }
+
+      recs.sort((a,b) => (a.type === 'urgent' ? -1 : 1)).forEach(r => {
+        const div = document.createElement('div');
+        div.className = `rec-card ${r.type}`;
+        div.innerHTML = `<div class="rec-icon">${r.icon}</div><div class="rec-text">${r.text}</div>`;
+        container.appendChild(div);
+      });
+    }
+
+    // ─── Export XLSX (ExcelJS) ───────────────────────────────────────────────
+    async function exportData() {
+      if(filteredData.length === 0) return showToast("لا توجد بيانات للتصدير", "var(--amber)");
+
+      const wb = new ExcelJS.Workbook();
+      wb.views = [{ rightToLeft: true }]; 
+      
+      const ws = wb.addWorksheet('طلبات');
+      ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+
+      ws.columns = [
+        { header: 'Order Name', key: 'name', width: 15 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Customer Name', key: 'customerName', width: 25 },
+        { header: 'Customer Phone', key: 'customerPhone', width: 20 },
+        { header: 'S1 Status', key: 's1Status', width: 25 },
+        { header: 'S2 Status', key: 's2Status', width: 25 },
+        { header: 'Courier', key: 'courier', width: 20 },
+        { header: 'Zone', key: 'zone', width: 20 },
+        { header: 'Tags', key: 'tags', width: 40 }
+      ];
+
+      filteredData.forEach(r => {
+        ws.addRow({
+          name: r.name || null,
+          createdAt: formatDate(r.createdAt) || null,
+          customerName: r.customerName || null,
+          customerPhone: r.customerPhone || null,
+          s1Status: r.s1Status || null,
+          s2Status: r.s2Status || null,
+          courier: r.courier || null,
+          zone: r.zone || null,
+          tags: (r.tags || []).join(', ') || null
+        });
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const todayStr = new Date().toISOString().split('T')[0];
+      a.download = `Orders-Dashboard-${todayStr}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ─── Utils ───────────────────────────────────────────────────────────────
+    function formatDateTime(isoString) {
+      if(!isoString) return '';
+      const d = new Date(isoString);
+      const pad = n => String(n).padStart(2, '0');
+      let hours = d.getHours();
+      const minutes = pad(d.getMinutes());
+      const ampm = hours >= 12 ? 'مساءً' : 'صباحاً';
+      hours = hours % 12 || 12;
+      return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(hours)}:${minutes} ${ampm}`;
+    }
+
+    function formatDate(isoString) {
+      if(!isoString) return '';
+      const d = new Date(isoString);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`;
+    }
+
+    function showToast(msg, bg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.backgroundColor = bg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+  </script>
+</body>
+</html>
