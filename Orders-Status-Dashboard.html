@@ -302,7 +302,8 @@ body{min-height:100vh}
 <div class="tabs-bar">
   <div class="tabs">
     <div class="tab on" onclick="switchTab('orders',this)">📋 Orders Status</div>
-    <div class="tab" onclick="switchTab('couriers',this)">🚚 Couriers</div>
+    <div class="tab" onclick="switchTab('daily',this)">📅 Daily Summary</div>
+    <div class="tab" onclick="switchTab('couriers',this)">🚚 المناديب</div>
   </div>
 </div>
 
@@ -313,26 +314,32 @@ body{min-height:100vh}
   <div class="fitem"><span class="flbl">إلى</span>
     <input class="date-inp" id="fTo" type="date"></div>
   <div class="fdiv"></div>
-  <div class="fitem"><span class="flbl">الكوريير</span>
-    <select class="fsel" id="fCourier"><option value="">All Couriers</option></select></div>
+  <div class="fitem"><span class="flbl">المندوب</span>
+    <select class="fsel" id="fCourier"><option value="">All المناديب</option></select></div>
   <div class="fitem"><span class="flbl">المنطقة</span>
     <select class="fsel" id="fZone">
       <option value="">All Zones</option>
       <option>Cairo+Giza</option><option>Other_Regions</option>
       <option>Show_Room</option><option>BLANK</option>
     </select></div>
-  <div class="fitem"><span class="flbl">حالة S1</span>
-    <select class="fsel" id="fS1">
-      <option value="">All Statuses</option>
-      <option>New Order</option><option>Confirmed</option><option>Ready</option>
-      <option>Shipped</option><option>Delivered</option><option>Returned</option>
-      <option>Cancelled</option><option>غير محدد</option>
-    </select></div>
   <div class="fitem"><span class="flbl">نوع الشحنة</span>
     <select class="fsel" id="fType">
       <option value="">S1 + S2</option>
       <option value="s1">S1 فقط</option>
       <option value="s2">S2 فقط</option>
+    </select></div>
+  <div class="fitem"><span class="flbl">حالة S1</span>
+    <select class="fsel" id="fS1">
+      <option value="">All S1</option>
+      <option>New Order</option><option>Confirmed</option><option>Ready</option>
+      <option>Shipped</option><option>Delivered</option><option>Returned</option>
+      <option>Cancelled</option><option>غير محدد</option>
+    </select></div>
+  <div class="fitem"><span class="flbl">حالة S2</span>
+    <select class="fsel" id="fS2">
+      <option value="">All S2</option>
+      <option>Confirmed+RETURN</option><option>Confirmed+EXCHANGE</option>
+      <option>Ready</option><option>Shipped</option><option>Returned</option>
     </select></div>
   <button class="apply-btn" onclick="applyFiltersAndRender()">تطبيق</button>
 </div>
@@ -378,18 +385,18 @@ body{min-height:100vh}
     <!-- KPIs -->
     <div class="kpi-row" id="kpiRow"></div>
 
-    <!-- Charts -->
-    <div class="g3">
+    <!-- Charts: S1 Bar | S2 Bar | S1 Donut | S2 Donut -->
+    <div class="g2" style="margin-bottom:11px">
       <div class="card">
-        <div class="card-hdr">
-          <span class="card-title">📊 Status Summary</span>
-          <div class="toggle-grp">
-            <button class="tg-btn on" id="btnG" onclick="setMode('grouped')">Grouped</button>
-            <button class="tg-btn" id="btnS" onclick="setMode('stacked')">Stacked</button>
-          </div>
-        </div>
-        <div class="chart-wrap h220"><canvas id="cSum"></canvas></div>
+        <div class="card-hdr"><span class="card-title">📊 Status Summary — S1</span></div>
+        <div class="chart-wrap h220"><canvas id="cSumS1"></canvas></div>
       </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">📊 Status Summary — S2</span></div>
+        <div class="chart-wrap h220"><canvas id="cSumS2"></canvas></div>
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:11px">
       <div class="card">
         <div class="card-hdr"><span class="card-title">🔵 Distribution (S1)</span></div>
         <div class="chart-wrap h170"><canvas id="cDS1"></canvas></div>
@@ -399,19 +406,6 @@ body{min-height:100vh}
         <div class="card-hdr"><span class="card-title">🟠 Distribution (S2)</span></div>
         <div class="chart-wrap h170"><canvas id="cDS2"></canvas></div>
         <div class="dleg" id="legS2"></div>
-      </div>
-    </div>
-
-    <!-- Daily Summary Table -->
-    <div class="card" style="margin-bottom:11px">
-      <div class="card-hdr">
-        <span class="card-title">📅 Daily Status Summary</span>
-        <button class="hbtn" style="height:24px;font-size:10px" onclick="exportXLSX()">↓ Export</button>
-      </div>
-      <div class="tbl-wrap"><table class="ds-tbl" id="dsTable"></table></div>
-      <div class="tbl-foot">
-        <span class="tbl-info" id="dsInfo"></span>
-        <div class="pag" id="dsPag"></div>
       </div>
     </div>
 
@@ -436,7 +430,7 @@ body{min-height:100vh}
             <th onclick="sortOrders('customerName')">العميل</th>
             <th onclick="sortOrders('customerPhone')">الهاتف</th>
             <th onclick="sortOrders('totalItems')">المنتجات</th>
-            <th onclick="sortOrders('courier')">الكوريير</th>
+            <th onclick="sortOrders('courier')">المندوب</th>
             <th onclick="sortOrders('zone')">المنطقة</th>
             <th onclick="sortOrders('s1')">S1</th>
             <th onclick="sortOrders('s2')">S2</th>
@@ -454,17 +448,38 @@ body{min-height:100vh}
   </div>
   </div>
 
-  <!-- ── TAB: COURIERS ── -->
+  <!-- ── TAB: DAILY SUMMARY ── -->
+  <div id="tab-daily" class="tab-content">
+  <div class="main">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-title">📅 Daily Status Summary</span>
+        <button class="hbtn" style="height:24px;font-size:10px" onclick="exportXLSX()">↓ Export</button>
+      </div>
+      <!-- Scrollable بدون pagination -->
+      <div class="tbl-wrap" style="max-height:75vh;overflow-y:auto">
+        <table class="ds-tbl" id="dsTable"></table>
+      </div>
+      <div class="tbl-foot" style="margin-top:6px">
+        <span class="tbl-info" id="dsInfo"></span>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ── TAB: مناديب ── -->
   <div id="tab-couriers" class="tab-content">
   <div class="main">
 
-    <!-- Matrix -->
+    <!-- Matrix — صفوف=المناديب، أعمدة=الحالات -->
     <div class="card" style="margin-bottom:11px">
       <div class="card-hdr">
-        <span class="card-title">📊 Courier vs Status Matrix</span>
+        <span class="card-title">📊 المناديب vs الحالات</span>
         <span style="font-size:10px;color:var(--text-3)" id="matrixRange"></span>
       </div>
-      <div class="tbl-wrap"><table class="matrix-tbl" id="matrixTbl"></table></div>
+      <div class="tbl-wrap" style="max-height:60vh;overflow-y:auto">
+        <table class="ds-tbl" id="matrixTbl"></table>
+      </div>
     </div>
 
     <!-- Courier Cards -->
@@ -492,15 +507,12 @@ const POLL_MS = 120_000; // 2 دقائق
 let allOrders    = [];
 let filteredOrds = [];
 let shopDomain   = '';
-let lastUpdated  = null;  // ISO string — آخر تحديث حقيقي من Shopify
+let lastUpdated  = null;
 let pollTimer    = null;
 let ordPage      = 1;
-let dsPage       = 1;
 let ordSortKey   = 'date';
 let ordSortDir   = -1;
 const ORD_PG     = 50;
-const DS_PG      = 10;
-let chartMode    = 'grouped';
 const CH = {};
 
 // ═══════════════════════════════════════════════════════════
@@ -643,16 +655,17 @@ function updateBadge(source, ts){
   const txt = document.getElementById('updBadgeText');
   if(!ts){ el.style.display='none'; return; }
   el.style.display = 'flex';
-  const d = new Date(ts);
-  const timeStr = d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-  const dateStr = d.toLocaleDateString('ar-EG',{day:'2-digit',month:'short'});
-  if(source==='shopify'){
-    el.className = 'upd-badge live';
-    txt.textContent = `آخر تحديث: ${dateStr} — ${timeStr}`;
-  } else {
-    el.className = 'upd-badge kv';
-    txt.textContent = `آخر تحديث: ${dateStr} — ${timeStr}`;
-  }
+  const d   = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  // أرقام إنجليزية موحدة — en-US
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr = `${pad(d.getDate())} ${MONTHS[d.getMonth()]}`;
+  let   h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const timeStr = `${pad(h)}:${pad(d.getMinutes())} ${ampm}`;
+  el.className = source==='shopify' ? 'upd-badge live' : 'upd-badge kv';
+  txt.textContent = `آخر تحديث: ${dateStr} — ${timeStr}`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -678,8 +691,12 @@ function startPolling(dateFrom, dateTo){
 function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }}
 
 function showToast(newTs){
-  const d = new Date(newTs);
-  const timeStr = d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+  const d   = new Date(newTs);
+  const pad = n => String(n).padStart(2,'0');
+  let   h   = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const timeStr = `${pad(h)}:${pad(d.getMinutes())} ${ampm}`;
   document.getElementById('toastMsg').textContent = `يوجد تحديث جديد — ${timeStr}`;
   document.getElementById('updToast').classList.add('show');
 }
@@ -691,7 +708,7 @@ function dismissToast(){ document.getElementById('updToast').classList.remove('s
 function buildCourierFilter(){
   const couriers = [...new Set(allOrders.map(o=>o.courier).filter(Boolean))].sort();
   const sel = document.getElementById('fCourier');
-  sel.innerHTML = '<option value="">All Couriers</option>' +
+  sel.innerHTML = '<option value="">All المناديب</option>' +
     couriers.map(c=>`<option>${c}</option>`).join('');
 }
 
@@ -699,6 +716,7 @@ function applyFiltersAndRender(){
   const courier = document.getElementById('fCourier').value;
   const zone    = document.getElementById('fZone').value;
   const s1      = document.getElementById('fS1').value;
+  const s2f     = document.getElementById('fS2').value;
   const type    = document.getElementById('fType').value;
   const dateFrom= document.getElementById('fFrom').value;
   const dateTo  = document.getElementById('fTo').value;
@@ -708,6 +726,7 @@ function applyFiltersAndRender(){
     if(courier && o.courier !== courier) return false;
     if(zone    && o.zone    !== zone)    return false;
     if(s1      && o.s1      !== s1)      return false;
+    if(s2f     && o.s2      !== s2f)     return false;
     if(type==='s1' && o.s2)             return false;
     if(type==='s2' && !o.s2)            return false;
     return true;
@@ -716,7 +735,8 @@ function applyFiltersAndRender(){
   ordPage = dsPage = 1;
   renderStatusBar(filteredOrds);
   renderKPIs(filteredOrds);
-  renderSummaryChart(filteredOrds);
+  renderSummaryS1(filteredOrds);
+  renderSummaryS2(filteredOrds);
   renderDonutS1(filteredOrds);
   renderDonutS2(filteredOrds);
   renderDSTable(filteredOrds);
@@ -804,45 +824,56 @@ function renderKPIs(orders){
 }
 
 // ═══════════════════════════════════════════════════════════
-// CHARTS
+// CHARTS — S1 Bar + S2 Bar (منفصلان)
 // ═══════════════════════════════════════════════════════════
-function setMode(m){
-  chartMode = m;
-  document.getElementById('btnG').classList.toggle('on', m==='grouped');
-  document.getElementById('btnS').classList.toggle('on', m==='stacked');
-  renderSummaryChart(filteredOrds);
-}
-
-function renderSummaryChart(orders){
-  kill('sum');
+function renderSummaryS1(orders){
+  kill('sumS1');
   const s1 = orders.filter(o=>!o.s2);
-  const s2 = orders.filter(o=>o.s2);
-  const s1keys = Object.keys(S1_COLORS);
-  const s2keys = Object.keys(S2_COLORS);
-  const s1c={}, s2c={};
-  s1.forEach(o=>{ s1c[o.s1]=(s1c[o.s1]||0)+1; });
-  s2.forEach(o=>{ s2c[o.s2]=(s2c[o.s2]||0)+1; });
-  const s1t = s1.length, s2t = s2.length;
-
-  const datasets = [
-    ...s1keys.map(k=>({label:k,data:[s1c[k]||0,0],backgroundColor:S1_COLORS[k],borderRadius:3})),
-    ...s2keys.map(k=>({label:k,data:[0,s2c[k]||0],backgroundColor:S2_COLORS[k],borderRadius:3})),
-  ];
-
-  const ctx = document.getElementById('cSum').getContext('2d');
-  CH.sum = new Chart(ctx,{
+  const labels = Object.keys(S1_COLORS);
+  const data   = labels.map(l=>s1.filter(o=>o.s1===l).length);
+  const ctx = document.getElementById('cSumS1').getContext('2d');
+  CH.sumS1 = new Chart(ctx,{
     type:'bar',
     data:{
-      labels:[`S1 (${s1t.toLocaleString('en-US')})`,`S2 (${s2t})`],
-      datasets,
+      labels,
+      datasets:[{ data, backgroundColor:labels.map(l=>S1_COLORS[l]), borderRadius:4, borderSkipped:false }],
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{
-        x:{stacked:chartMode==='stacked',grid:{display:false},ticks:{font:{...FONT,size:11},color:tickC}},
-        y:{stacked:chartMode==='stacked',grid:{color:gridC},ticks:{font:{...MONO,size:9},color:tickC},beginAtZero:true},
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw.toLocaleString('en-US')}`}},
       },
-      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{...FONT,size:10},color:tickC, maxRotation:35}},
+        y:{grid:{color:gridC}, ticks:{font:{...MONO,size:9},color:tickC}, beginAtZero:true},
+      },
+    },
+  });
+}
+
+function renderSummaryS2(orders){
+  kill('sumS2');
+  const s2 = orders.filter(o=>o.s2);
+  const labels = Object.keys(S2_COLORS);
+  const data   = labels.map(l=>s2.filter(o=>o.s2===l).length);
+  const ctx = document.getElementById('cSumS2').getContext('2d');
+  CH.sumS2 = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{ data, backgroundColor:labels.map(l=>S2_COLORS[l]), borderRadius:4, borderSkipped:false }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw.toLocaleString('en-US')}`}},
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{...FONT,size:10},color:tickC, maxRotation:35}},
+        y:{grid:{color:gridC}, ticks:{font:{...MONO,size:9},color:tickC}, beginAtZero:true},
+      },
     },
   });
 }
@@ -896,13 +927,12 @@ function renderDonutS2(orders){
 }
 
 // ═══════════════════════════════════════════════════════════
-// DAILY SUMMARY TABLE
+// DAILY SUMMARY TABLE — scrollable، بدون pagination
 // ═══════════════════════════════════════════════════════════
 const S1_HEADS = ['New Order','Confirmed','Ready','Shipped','Delivered','Returned','Cancelled'];
 const S2_HEADS = ['Conf.+RETURN','Conf.+EXCHANGE','Ready','Shipped','Returned'];
 
 function renderDSTable(orders){
-  // تجميع per day — الأوردرات اللي اتغيرت حالتها في كل يوم (حسب createdAt)
   const days={};
   orders.forEach(o=>{
     if(!days[o.date]) days[o.date]={ s1:{}, s2:{} };
@@ -910,64 +940,57 @@ function renderDSTable(orders){
     else      days[o.date].s2[o.s2]=(days[o.date].s2[o.s2]||0)+1;
   });
 
-  const sortedDays = Object.keys(days).sort();
-  const totalPages = Math.max(1,Math.ceil(sortedDays.length/DS_PG));
-  if(dsPage>totalPages) dsPage=1;
-  const pageRows = sortedDays.slice((dsPage-1)*DS_PG, dsPage*DS_PG);
+  // أحدث تاريخ أولاً
+  const sortedDays = Object.keys(days).sort((a,b)=>b.localeCompare(a));
 
-  // Header
-  let html = `<thead><tr>
-    <th rowspan="2" class="th-date">Date</th>
-    <th colspan="${S1_HEADS.length+1}" class="th-s1">S1</th>
+  // Header — S2 على اليسار (أول)، S1 على اليمين (بعد)، ثم Total
+  let html = `<thead style="position:sticky;top:0;z-index:5">
+  <tr>
+    <th rowspan="2" class="th-date" style="position:sticky;right:0;z-index:6;background:var(--surface-2)">Date</th>
     <th colspan="${S2_HEADS.length+1}" class="th-s2">S2</th>
-    <th rowspan="2" class="th-sub">Total</th>
+    <th colspan="${S1_HEADS.length+1}" class="th-s1">S1</th>
+    <th rowspan="2" class="th-sub" style="background:var(--surface-2);color:var(--text-2)">Total</th>
   </tr><tr>
-    ${S1_HEADS.map(h=>`<th class="th-sub">${h}</th>`).join('')}
-    <th class="th-sub" style="background:var(--accent-l);color:var(--accent)">Total</th>
     ${S2_HEADS.map(h=>`<th class="th-sub">${h}</th>`).join('')}
     <th class="th-sub" style="background:#fff7ed;color:var(--orange)">Total</th>
+    ${S1_HEADS.map(h=>`<th class="th-sub">${h}</th>`).join('')}
+    <th class="th-sub" style="background:var(--accent-l);color:var(--accent)">Total</th>
   </tr></thead><tbody>`;
 
-  // Rows
-  pageRows.forEach(day=>{
+  // كل الأيام — بدون pagination
+  sortedDays.forEach(day=>{
     const s1=days[day].s1; const s2=days[day].s2;
     const s1vals=S1_HEADS.map(h=>s1[h]||0);
     const s2vals=S2_HEADS.map(h=>s2[h]||0);
     const s1t=s1vals.reduce((a,b)=>a+b,0);
     const s2t=s2vals.reduce((a,b)=>a+b,0);
     html+=`<tr>
-      <td class="td-date">${day}</td>
-      ${s1vals.map(v=>`<td class="td-num">${v||''}</td>`).join('')}
-      <td class="td-num" style="font-weight:600;background:var(--accent-l);color:var(--accent)">${s1t}</td>
+      <td class="td-date" style="position:sticky;right:0;background:var(--surface)">${day}</td>
       ${s2vals.map(v=>`<td class="td-num">${v||''}</td>`).join('')}
-      <td class="td-num" style="font-weight:600;background:#fff7ed;color:var(--orange)">${s2t}</td>
-      <td class="td-num" style="font-weight:700">${s1t+s2t}</td>
+      <td class="td-num" style="font-weight:600;background:#fff7ed;color:var(--orange)">${s2t||''}</td>
+      ${s1vals.map(v=>`<td class="td-num">${v||''}</td>`).join('')}
+      <td class="td-num" style="font-weight:600;background:var(--accent-l);color:var(--accent)">${s1t||''}</td>
+      <td class="td-num" style="font-weight:700">${(s1t+s2t)||''}</td>
     </tr>`;
   });
 
-  // Totals
+  // Total row — sticky bottom
   const s1tot=S1_HEADS.map(h=>orders.filter(o=>!o.s2&&o.s1===h).length);
   const s2tot=S2_HEADS.map(h=>orders.filter(o=>o.s2===h).length);
   const gt1=s1tot.reduce((a,b)=>a+b,0);
   const gt2=s2tot.reduce((a,b)=>a+b,0);
-  html+=`<tr class="tr-total">
-    <td class="td-date">Total</td>
-    ${s1tot.map(v=>`<td class="td-num">${v.toLocaleString('en-US')}</td>`).join('')}
-    <td class="td-num" style="background:var(--accent-l);color:var(--accent)">${gt1.toLocaleString('en-US')}</td>
+  html+=`<tr class="tr-total" style="position:sticky;bottom:0;z-index:5">
+    <td class="td-date" style="position:sticky;right:0;background:var(--surface-2)">Total</td>
     ${s2tot.map(v=>`<td class="td-num">${v.toLocaleString('en-US')}</td>`).join('')}
     <td class="td-num" style="background:#fff7ed;color:var(--orange)">${gt2.toLocaleString('en-US')}</td>
+    ${s1tot.map(v=>`<td class="td-num">${v.toLocaleString('en-US')}</td>`).join('')}
+    <td class="td-num" style="background:var(--accent-l);color:var(--accent)">${gt1.toLocaleString('en-US')}</td>
     <td class="td-num">${(gt1+gt2).toLocaleString('en-US')}</td>
   </tr></tbody>`;
 
   document.getElementById('dsTable').innerHTML=html;
-  document.getElementById('dsInfo').textContent=`${(dsPage-1)*DS_PG+1}–${Math.min(dsPage*DS_PG,sortedDays.length)} من ${sortedDays.length} يوم`;
-
-  const pag=document.getElementById('dsPag');
-  pag.innerHTML=`<button class="pgb" ${dsPage===1?'disabled':''} onclick="goDSP(${dsPage-1})">›</button>`;
-  for(let p=1;p<=totalPages;p++) pag.innerHTML+=`<button class="pgb ${p===dsPage?'on':''}" onclick="goDSP(${p})">${p}</button>`;
-  pag.innerHTML+=`<button class="pgb" ${dsPage===totalPages?'disabled':''} onclick="goDSP(${dsPage+1})">‹</button>`;
+  document.getElementById('dsInfo').textContent=`${sortedDays.length} يوم`;
 }
-function goDSP(p){ dsPage=p; renderDSTable(filteredOrds); }
 
 // ═══════════════════════════════════════════════════════════
 // RECOMMENDATIONS
@@ -1113,63 +1136,70 @@ function renderOrdersTable(){
 function goOrdP(p){ ordPage=p; renderOrdersTable(); }
 
 // ═══════════════════════════════════════════════════════════
-// COURIERS — MATRIX
+// مناديب — MATRIX (صفوف=مناديب، أعمدة=حالات)
+// نفس نمط Daily Summary
 // ═══════════════════════════════════════════════════════════
 function renderMatrix(orders){
   const couriers=[...new Set(orders.map(o=>o.courier).filter(Boolean))].sort();
   document.getElementById('matrixRange').textContent=
     `${document.getElementById('fFrom').value} — ${document.getElementById('fTo').value}`;
 
-  // build matrix data
-  const m={}; // courier → status → count
-  const all={};
+  // بناء data: courier → status key → count
+  const m={};
   orders.forEach(o=>{
-    const c=o.courier||'غير محدد';
+    const c = o.courier||'غير محدد';
     if(!m[c]) m[c]={};
     const key = o.s2 ? `S2:${o.s2}` : `S1:${o.s1}`;
     m[c][key]=(m[c][key]||0)+1;
-    all[key]=(all[key]||0)+1;
   });
 
-  const S1_ROW_KEYS = S1_HEADS.map(h=>`S1:${h}`);
-  const S2_ROW_KEYS = S2_HEADS.map(h=>`S2:${h}`);
-  const S1_ROW_LABELS = S1_HEADS;
-  const S2_ROW_LABELS = ['Conf.+RETURN','Conf.+EXCHANGE','Ready','Shipped','Returned'];
+  // الأعمدة: S2 أولاً ثم S1 (نفس ترتيب Daily Summary)
+  const S2_COL_KEYS   = S2_HEADS.map(h=>`S2:${h}`);
+  const S1_COL_KEYS   = S1_HEADS.map(h=>`S1:${h}`);
+  const allCouriers   = [...couriers]; // بدون "غير محدد" إلا لو موجود
 
-  let html=`<thead><tr>
-    <th class="mth-s">Status</th>
-    <th class="mth-all">All Couriers</th>
-    ${couriers.map(c=>`<th class="mth-c">${c}</th>`).join('')}
+  // Header — صف واحد للأعمدة
+  let html = `<thead style="position:sticky;top:0;z-index:5"><tr>
+    <th rowspan="2" class="th-date" style="position:sticky;right:0;z-index:6;background:var(--surface-2);text-align:right">المندوب</th>
+    <th colspan="${S2_HEADS.length+1}" class="th-s2">S2</th>
+    <th colspan="${S1_HEADS.length+1}" class="th-s1">S1</th>
+    <th rowspan="2" class="th-sub" style="background:var(--surface-2);color:var(--text-2)">Total</th>
+  </tr><tr>
+    ${S2_HEADS.map(h=>`<th class="th-sub">${h}</th>`).join('')}
+    <th class="th-sub" style="background:#fff7ed;color:var(--orange)">Total</th>
+    ${S1_HEADS.map(h=>`<th class="th-sub">${h}</th>`).join('')}
+    <th class="th-sub" style="background:var(--accent-l);color:var(--accent)">Total</th>
   </tr></thead><tbody>`;
 
-  const mkRow=(key,label,cls,s_label)=>{
-    const allV=all[key]||0;
-    html+=`<tr class="${cls}"><td class="mth-s">
-      <span class="slbl-tag ${s_label}">${key.split(':')[0]}</span> ${label}
-    </td>
-    <td class="m-num" style="font-weight:600">${allV.toLocaleString('en-US')}</td>
-    ${couriers.map(c=>`<td class="m-num">${(m[c]?.[key]||0).toLocaleString('en-US')}</td>`).join('')}
+  // صف لكل مندوب
+  allCouriers.forEach(courier=>{
+    const cd = m[courier]||{};
+    const s2vals = S2_COL_KEYS.map(k=>cd[k]||0);
+    const s1vals = S1_COL_KEYS.map(k=>cd[k]||0);
+    const s2t    = s2vals.reduce((a,b)=>a+b,0);
+    const s1t    = s1vals.reduce((a,b)=>a+b,0);
+    html+=`<tr>
+      <td class="td-date" style="position:sticky;right:0;background:var(--surface);font-weight:600;text-align:right">${courier}</td>
+      ${s2vals.map(v=>`<td class="td-num">${v||''}</td>`).join('')}
+      <td class="td-num" style="font-weight:600;background:#fff7ed;color:var(--orange)">${s2t||''}</td>
+      ${s1vals.map(v=>`<td class="td-num">${v||''}</td>`).join('')}
+      <td class="td-num" style="font-weight:600;background:var(--accent-l);color:var(--accent)">${s1t||''}</td>
+      <td class="td-num" style="font-weight:700">${(s1t+s2t)||''}</td>
     </tr>`;
-  };
-
-  S1_ROW_KEYS.forEach((k,i)=>mkRow(k,S1_ROW_LABELS[i],'mrow-s1','slbl-s1'));
-  html+=`<tr class="m-sep"><td colspan="${couriers.length+2}"></td></tr>`;
-  S2_ROW_KEYS.forEach((k,i)=>mkRow(k,S2_ROW_LABELS[i],'mrow-s2','slbl-s2'));
+  });
 
   // Total row
-  const totals={all:0};
-  couriers.forEach(c=>{ totals[c]=0; });
-  Object.values(m).forEach((cm,i)=>{
-    const c=couriers[i]||'';
-    Object.values(cm).forEach(v=>{ totals.all+=v; if(c) totals[c]+=v; });
-  });
-  // recalc properly
-  totals.all=orders.length;
-  couriers.forEach(c=>{ totals[c]=orders.filter(o=>(o.courier||'غير محدد')===c).length; });
-
-  html+=`<tr class="mrow-tot"><td class="mth-s">Total</td>
-    <td class="m-num">${totals.all.toLocaleString('en-US')}</td>
-    ${couriers.map(c=>`<td class="m-num">${(totals[c]||0).toLocaleString('en-US')}</td>`).join('')}
+  const s2tot = S2_COL_KEYS.map(k=>orders.filter(o=>o.s2&&`S2:${o.s2}`===k).length);
+  const s1tot = S1_COL_KEYS.map(k=>orders.filter(o=>!o.s2&&`S1:${o.s1}`===k).length);
+  const gt2   = s2tot.reduce((a,b)=>a+b,0);
+  const gt1   = s1tot.reduce((a,b)=>a+b,0);
+  html+=`<tr class="tr-total" style="position:sticky;bottom:0;z-index:5">
+    <td class="td-date" style="position:sticky;right:0;background:var(--surface-2);text-align:right">Total</td>
+    ${s2tot.map(v=>`<td class="td-num">${v.toLocaleString('en-US')}</td>`).join('')}
+    <td class="td-num" style="background:#fff7ed;color:var(--orange)">${gt2.toLocaleString('en-US')}</td>
+    ${s1tot.map(v=>`<td class="td-num">${v.toLocaleString('en-US')}</td>`).join('')}
+    <td class="td-num" style="background:var(--accent-l);color:var(--accent)">${gt1.toLocaleString('en-US')}</td>
+    <td class="td-num">${(gt1+gt2).toLocaleString('en-US')}</td>
   </tr></tbody>`;
 
   document.getElementById('matrixTbl').innerHTML=html;
@@ -1225,7 +1255,7 @@ async function exportXLSX(){
   ws.columns=[
     {header:'رقم الأوردر',key:'name',width:13},{header:'التاريخ',key:'date',width:12},
     {header:'العميل',key:'customerName',width:22},{header:'الهاتف',key:'customerPhone',width:15},
-    {header:'المنتجات',key:'totalItems',width:10},{header:'الكوريير',key:'courier',width:16},
+    {header:'المنتجات',key:'totalItems',width:10},{header:'المندوب',key:'courier',width:16},
     {header:'المنطقة',key:'zone',width:14},{header:'S1',key:'s1',width:18},
     {header:'S2',key:'s2',width:22},{header:'Return Status',key:'returnStatus',width:15},
     {header:'Bosta Tracking',key:'bostaTracking',width:18},
